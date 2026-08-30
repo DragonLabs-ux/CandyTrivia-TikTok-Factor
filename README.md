@@ -4,25 +4,29 @@ Standalone production pipeline for the Candy Trivia TikTok channel.
 
 ## Pipeline
 
-`trivia JSON -> GPT-Image candy artwork -> Remotion 25-second MP4 -> Cloudflare R2 -> Buffer -> TikTok`
+`trivia JSON -> local/ChatGPT candy artwork -> neural voice + premium SFX -> Remotion MP4 -> Cloudflare R2 -> Buffer -> TikTok -> analytics`
 
 ## What it does
 
-- Generates 3 vertical 9:16 candy backgrounds per trivia day.
-- Renders a locked 25-second 1080x1920 TikTok video.
+- Renders vertical 1080x1920 TikTok trivia videos.
 - Shows answers for Q1 and Q2 only.
-- Never passes the Q3 answer into the video composition.
+- Never passes the Q3 answer into the public video composition.
 - Stores the withheld Q3 answer only in a local gitignored `.private/answers.jsonl` file.
 - Validates captions are under 120 characters and contain exactly 4 hashtags.
-- Uploads the finished MP4 to Cloudflare R2.
-- Queues the video to a connected TikTok channel through Buffer using automatic publishing.
+- Supports zero-image-credit `render-local` mode using pre-generated/local q1/q2/q3 artwork.
+- Generates premium layered sound effects locally.
+- Generates neural narration automatically for local renders using Edge neural TTS through Python.
+- Uploads finished MP4s to Cloudflare R2.
+- Queues videos to the connected TikTok channel through Buffer.
+- Reads Buffer post metrics and produces a 0-100 Growth Score with `npm run analytics`.
 
 ## Requirements
 
 - Node.js 20+
-- OpenAI API key with image-generation access
+- Python 3 for neural narration in local-render mode
 - Buffer API key and a TikTok channel connected in Buffer
 - Cloudflare R2 bucket with a public HTTPS base URL
+- For API-generated imagery only: an OpenAI API key with image-generation credits
 
 ## Setup
 
@@ -36,6 +40,23 @@ notepad .env
 
 Fill the local `.env` file. Never commit it.
 
+## Premium neural voice
+
+`render-local` automatically generates voice clips for Q1, A1, Q2, A2, Q3, and the final comments CTA. It never generates or speaks the withheld Q3 answer.
+
+The first voice-enabled render automatically installs the Python `edge-tts` package if needed.
+
+Optional `.env` controls:
+
+```text
+TTS_ENABLED=1
+TTS_VOICE=en-US-AvaNeural
+TTS_RATE=+24%
+TTS_PITCH=+2Hz
+```
+
+Set `TTS_ENABLED=0` to turn narration off.
+
 ## Find your Buffer TikTok channel ID
 
 ```powershell
@@ -44,29 +65,53 @@ npm run channels
 
 Copy the TikTok channel ID into `BUFFER_TIKTOK_CHANNEL_ID` in `.env`.
 
-## Safe render-only test
+## Zero-credit local render
 
-```powershell
-npm run render -- examples/day-001.json
+Place:
+
+```text
+public/generated/day-001/q1.png
+public/generated/day-001/q2.png
+public/generated/day-001/q3.png
 ```
 
-The MP4 will be written to `out/` and nothing will be published.
-
-## Full publish pipeline
+Then run:
 
 ```powershell
-npm run run -- examples/day-001.json
+npm run render-local -- examples/day-001.json
 ```
 
-This generates images, renders the MP4, uploads it to R2, and queues it in Buffer for automatic TikTok publishing.
+The command refuses to call the OpenAI Images API when local images are required and missing.
 
-## Multiple days
+## Publish a rendered post
 
 ```powershell
-npm run run -- examples/day-001.json examples/day-002.json examples/day-003.json
+npm run publish -- examples/day-001.json
 ```
 
-Days are processed sequentially so queue order is preserved.
+This uploads the rendered MP4 to R2 and queues/schedules it in Buffer.
+
+## Analytics and Growth Score
+
+After a Buffer post has been sent and metrics have started refreshing:
+
+```powershell
+npm run analytics
+```
+
+Or analyze one Buffer post directly:
+
+```powershell
+npm run analytics -- YOUR_BUFFER_POST_ID
+```
+
+Analytics snapshots are appended to:
+
+```text
+out/analytics-history.jsonl
+```
+
+The initial score uses available views, engagement rate, comments, shares, and follows metrics. Fresh posts may display `COLLECTING DATA` because social metrics can lag.
 
 ## Input format
 
@@ -86,7 +131,7 @@ Optional exact scheduling can be supplied with an offset-aware ISO timestamp:
 "scheduledAt": "2026-09-01T19:00:00-07:00"
 ```
 
-Without `scheduledAt`, Buffer's TikTok queue schedule is used.
+Without `scheduledAt`, Buffer's queue schedule is used.
 
 ## Security
 
