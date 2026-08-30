@@ -1,11 +1,12 @@
 {
   "name": "candy-trivia-tiktok-factory",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "run": "tsx src/cli.ts run",
     "render": "tsx src/cli.ts render",
+    "render-local": "tsx src/cli.ts render-local",
     "publish": "tsx src/cli.ts publish",
     "channels": "tsx src/cli.ts channels",
     "typecheck": "tsc --noEmit"
