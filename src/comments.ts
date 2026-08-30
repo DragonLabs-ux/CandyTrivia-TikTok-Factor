@@ -2,6 +2,7 @@ import 'dotenv/config';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import type {TriviaDay} from './pipeline.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const privateDir = path.join(root, '.private');
@@ -21,6 +22,11 @@ type BufferPost = {
   dueAt?: string | null;
   sentAt?: string | null;
   externalLink?: string | null;
+};
+
+type PublishedPostRef = {
+  id: string;
+  dueAt?: string | null;
 };
 
 const requiredEnv = (name: string): string => {
@@ -75,6 +81,22 @@ const readQueue = async (): Promise<PendingComment[]> => {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw error;
   }
+};
+
+export const buildAnswerComment = (day: TriviaDay) =>
+  `🍭 Q3 Answer: ${day.q3.answer}\nDid you get 3/3? 👀`;
+
+export const recordPendingComment = async (day: TriviaDay, post: PublishedPostRef) => {
+  await fs.mkdir(privateDir, {recursive: true});
+  const entry: PendingComment = {
+    day: day.day,
+    bufferPostId: post.id,
+    scheduledAt: post.dueAt ?? day.scheduledAt ?? null,
+    comment: buildAnswerComment(day),
+    createdAt: new Date().toISOString(),
+  };
+  await fs.appendFile(queueFile, `${JSON.stringify(entry)}\n`, 'utf8');
+  return entry;
 };
 
 export const runPendingComments = async (requestedIds: string[] = []) => {
