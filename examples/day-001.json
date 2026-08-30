@@ -1,0 +1,17 @@
+{
+  "day": 1,
+  "q1": {
+    "question": "How many books are in the King James Bible?",
+    "answer": "66"
+  },
+  "q2": {
+    "question": "How many hearts does an octopus have?",
+    "answer": "3"
+  },
+  "q3": {
+    "question": "What was the first thing God created on day one?",
+    "answer": "Light",
+    "withhold": true
+  },
+  "caption": "Can you get all 3? #trivia #quiztime #triviachallenge #funfacts"
+}
