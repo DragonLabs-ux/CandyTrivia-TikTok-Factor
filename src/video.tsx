@@ -149,25 +149,25 @@ const AnswerScene: React.FC<{image: string; answer: string}> = ({image, answer})
 const CueAudio = () => (
   <>
     {[0, 6, 14].map((second) => (
-      <Sequence key={`q-${second}`} from={second * FPS} durationInFrames={Math.round(0.45 * FPS)} layout="none">
-        <Audio src={staticFile('audio/question.wav')} />
+      <Sequence key={`q-${second}`} from={second * FPS} durationInFrames={Math.round(0.34 * FPS)} layout="none">
+        <Audio src={staticFile('audio/premium-question.wav')} volume={0.5} />
       </Sequence>
     ))}
     {[1, 2, 3, 7, 8, 9, 15, 16, 17].map((second) => (
-      <Sequence key={`tick-${second}`} from={second * FPS} durationInFrames={Math.round(0.25 * FPS)} layout="none">
-        <Audio src={staticFile('audio/tick.wav')} />
+      <Sequence key={`tick-${second}`} from={second * FPS} durationInFrames={Math.round(0.16 * FPS)} layout="none">
+        <Audio src={staticFile('audio/premium-tick.wav')} volume={0.28} />
       </Sequence>
     ))}
     {[4, 10].map((second) => (
-      <Sequence key={`ding-${second}`} from={second * FPS} durationInFrames={Math.round(0.7 * FPS)} layout="none">
-        <Audio src={staticFile('audio/ding.wav')} />
+      <Sequence key={`ding-${second}`} from={second * FPS} durationInFrames={Math.round(0.62 * FPS)} layout="none">
+        <Audio src={staticFile('audio/premium-ding.wav')} volume={0.5} />
       </Sequence>
     ))}
     <Sequence from={18 * FPS} durationInFrames={4 * FPS} layout="none">
-      <Audio src={staticFile('audio/suspense.wav')} />
+      <Audio src={staticFile('audio/premium-suspense.wav')} volume={0.36} />
     </Sequence>
-    <Sequence from={22 * FPS} durationInFrames={Math.round(0.6 * FPS)} layout="none">
-      <Audio src={staticFile('audio/final.wav')} />
+    <Sequence from={22 * FPS} durationInFrames={Math.round(0.55 * FPS)} layout="none">
+      <Audio src={staticFile('audio/premium-final.wav')} volume={0.42} />
     </Sequence>
   </>
 );
