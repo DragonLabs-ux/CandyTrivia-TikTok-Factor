@@ -150,27 +150,53 @@ const CueAudio = () => (
   <>
     {[0, 6, 14].map((second) => (
       <Sequence key={`q-${second}`} from={second * FPS} durationInFrames={Math.round(0.34 * FPS)} layout="none">
-        <Audio src={staticFile('audio/premium-question.wav')} volume={0.5} />
+        <Audio src={staticFile('audio/premium-question.wav')} volume={0.22} />
       </Sequence>
     ))}
     {[1, 2, 3, 7, 8, 9, 15, 16, 17].map((second) => (
       <Sequence key={`tick-${second}`} from={second * FPS} durationInFrames={Math.round(0.16 * FPS)} layout="none">
-        <Audio src={staticFile('audio/premium-tick.wav')} volume={0.28} />
+        <Audio src={staticFile('audio/premium-tick.wav')} volume={0.12} />
       </Sequence>
     ))}
     {[4, 10].map((second) => (
       <Sequence key={`ding-${second}`} from={second * FPS} durationInFrames={Math.round(0.62 * FPS)} layout="none">
-        <Audio src={staticFile('audio/premium-ding.wav')} volume={0.5} />
+        <Audio src={staticFile('audio/premium-ding.wav')} volume={0.26} />
       </Sequence>
     ))}
     <Sequence from={18 * FPS} durationInFrames={4 * FPS} layout="none">
-      <Audio src={staticFile('audio/premium-suspense.wav')} volume={0.36} />
+      <Audio src={staticFile('audio/premium-suspense.wav')} volume={0.15} />
     </Sequence>
     <Sequence from={22 * FPS} durationInFrames={Math.round(0.55 * FPS)} layout="none">
-      <Audio src={staticFile('audio/premium-final.wav')} volume={0.42} />
+      <Audio src={staticFile('audio/premium-final.wav')} volume={0.22} />
     </Sequence>
   </>
 );
+
+const VoiceAudio: React.FC<{day: number}> = ({day}) => {
+  const base = `generated/day-${String(day).padStart(3, '0')}`;
+  return (
+    <>
+      <Sequence from={Math.round(0.12 * FPS)} durationInFrames={Math.round(3.75 * FPS)} layout="none">
+        <Audio src={staticFile(`${base}/voice-q1.mp3`)} volume={0.98} />
+      </Sequence>
+      <Sequence from={Math.round(4.06 * FPS)} durationInFrames={Math.round(1.82 * FPS)} layout="none">
+        <Audio src={staticFile(`${base}/voice-a1.mp3`)} volume={1} />
+      </Sequence>
+      <Sequence from={Math.round(6.12 * FPS)} durationInFrames={Math.round(3.75 * FPS)} layout="none">
+        <Audio src={staticFile(`${base}/voice-q2.mp3`)} volume={0.98} />
+      </Sequence>
+      <Sequence from={Math.round(10.06 * FPS)} durationInFrames={Math.round(3.75 * FPS)} layout="none">
+        <Audio src={staticFile(`${base}/voice-a2.mp3`)} volume={1} />
+      </Sequence>
+      <Sequence from={Math.round(14.12 * FPS)} durationInFrames={Math.round(3.75 * FPS)} layout="none">
+        <Audio src={staticFile(`${base}/voice-q3.mp3`)} volume={0.98} />
+      </Sequence>
+      <Sequence from={Math.round(22.08 * FPS)} durationInFrames={Math.round(2.78 * FPS)} layout="none">
+        <Audio src={staticFile(`${base}/voice-cta.mp3`)} volume={1} />
+      </Sequence>
+    </>
+  );
+};
 
 export const CandyTriviaVideo: React.FC<CandyTriviaVideoProps> = (props) => (
   <AbsoluteFill>
@@ -219,6 +245,7 @@ export const CandyTriviaVideo: React.FC<CandyTriviaVideoProps> = (props) => (
       </AbsoluteFill>
     </Sequence>
     <CueAudio />
+    <VoiceAudio day={props.day} />
   </AbsoluteFill>
 );
 
