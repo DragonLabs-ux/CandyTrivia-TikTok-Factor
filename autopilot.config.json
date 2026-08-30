@@ -1,0 +1,40 @@
+{
+  "campaign": "Trivia Candy Fun - 14 Day Growth Test",
+  "postsPerDay": 3,
+  "days": 14,
+  "totalPosts": 42,
+  "postingSlotsLocal": ["09:00", "15:00", "19:00"],
+  "formats": [
+    {
+      "slot": 1,
+      "name": "fast-easy",
+      "goal": "reach",
+      "hookFamily": ["You have 3 seconds", "Can you get 3 out of 3", "Easy until question 3"]
+    },
+    {
+      "slot": 2,
+      "name": "hard-challenge",
+      "goal": "comments-shares",
+      "hookFamily": ["Most people miss this", "Only trivia experts get all 3", "Question 3 is brutal"]
+    },
+    {
+      "slot": 3,
+      "name": "app-or-experiment",
+      "goal": "app-store-intent",
+      "hookFamily": ["Think TikTok trivia is easy", "Try this in Trivia Candy Fun", "Can you beat the app"]
+    }
+  ],
+  "ratingWindowsHours": [24, 72],
+  "growthScoreWeights": {
+    "views": 0.35,
+    "engagementRate": 0.25,
+    "comments": 0.15,
+    "shares": 0.15,
+    "follows": 0.1
+  },
+  "promotion": {
+    "app": "Trivia Candy Fun",
+    "platform": "Apple App Store",
+    "androidAvailable": false
+  }
+}
