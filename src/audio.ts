@@ -69,7 +69,6 @@ const writeLayeredWav = async (
       mixed += waveform(phases[index], layer.wave ?? 'sine') * layer.gain * envelope;
     });
 
-    // Gentle saturation keeps layered chimes smooth instead of harsh/clipped.
     const softened = Math.tanh(mixed * 1.1) * 0.92;
     buffer.writeInt16LE(Math.round(softened * 32767), 44 + i * 2);
   }
@@ -82,34 +81,25 @@ export const ensurePremiumAudio = async (publicDir: string) => {
   await fs.mkdir(audioDir, {recursive: true});
 
   await Promise.all([
-    // Short two-note candy-pop: warm and light, not an arcade buzzer.
-    writeLayeredWav(path.join(audioDir, 'question.wav'), 0.34, [
+    writeLayeredWav(path.join(audioDir, 'premium-question.wav'), 0.34, [
       {startHz: 500, endHz: 620, gain: 0.11, decay: 7, wave: 'triangle'},
       {startHz: 760, endHz: 940, gain: 0.06, decay: 8, delay: 0.035},
     ]),
-
-    // Subtle countdown tap. Kept intentionally quiet because it repeats 9 times.
-    writeLayeredWav(path.join(audioDir, 'tick.wav'), 0.16, [
+    writeLayeredWav(path.join(audioDir, 'premium-tick.wav'), 0.16, [
       {startHz: 650, endHz: 500, gain: 0.075, decay: 18, wave: 'triangle'},
       {startHz: 980, endHz: 720, gain: 0.025, decay: 22, delay: 0.008},
     ]),
-
-    // Answer reveal sparkle/chime.
-    writeLayeredWav(path.join(audioDir, 'ding.wav'), 0.62, [
+    writeLayeredWav(path.join(audioDir, 'premium-ding.wav'), 0.62, [
       {startHz: 660, endHz: 680, gain: 0.085, decay: 4.7},
       {startHz: 990, endHz: 1020, gain: 0.055, decay: 5.2, delay: 0.025},
       {startHz: 1320, endHz: 1360, gain: 0.03, decay: 6, delay: 0.055},
     ]),
-
-    // Very low-level tension bed for the withheld third answer.
-    writeLayeredWav(path.join(audioDir, 'suspense.wav'), 4, [
+    writeLayeredWav(path.join(audioDir, 'premium-suspense.wav'), 4, [
       {startHz: 155, endHz: 188, gain: 0.018, attack: 0.28, release: 0.35, decay: 0.05},
       {startHz: 232, endHz: 278, gain: 0.012, attack: 0.36, release: 0.35, decay: 0.04},
       {startHz: 310, endHz: 365, gain: 0.007, attack: 0.45, release: 0.35, decay: 0.03},
     ]),
-
-    // Soft downward resolve into the comments CTA.
-    writeLayeredWav(path.join(audioDir, 'final.wav'), 0.55, [
+    writeLayeredWav(path.join(audioDir, 'premium-final.wav'), 0.55, [
       {startHz: 620, endHz: 410, gain: 0.065, attack: 0.035, decay: 4.5, wave: 'triangle'},
       {startHz: 930, endHz: 610, gain: 0.03, attack: 0.05, decay: 5.2, delay: 0.02},
     ]),
