@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {ensurePremiumAudio} from './audio.js';
 import type {TriviaDay} from './pipeline.js';
 import {renderDay} from './pipeline.js';
+import {ensureNeuralVoiceover} from './voiceover.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
@@ -34,8 +35,14 @@ export const renderLocalDay = async (day: TriviaDay): Promise<string> => {
   }
 
   // Generate the softer premium sound set before Remotion bundles the composition.
-  // These use separate filenames so the legacy fallback tones cannot overwrite them.
   await ensurePremiumAudio(publicDir);
+
+  // Generate neural narration automatically. This uses Edge neural TTS through Python,
+  // so it does not consume OpenAI image or speech API credits. Set TTS_ENABLED=0 to disable.
+  const voiceReady = await ensureNeuralVoiceover(day);
+  if (!voiceReady && process.env.TTS_ENABLED?.trim() !== '0') {
+    throw new Error('Premium neural voiceover generation did not produce all required audio clips.');
+  }
 
   // renderDay only calls the Images API for missing files. The preflight above guarantees
   // all expected images exist, so this path never spends OpenAI image-generation credits.
