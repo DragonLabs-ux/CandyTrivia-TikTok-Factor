@@ -9,10 +9,18 @@ const privateDir = path.join(root, '.private');
 const publicDir = path.join(root, 'public');
 const dayLabel = (day: number) => String(day).padStart(3, '0');
 
+const desiredVoiceSignature = () => JSON.stringify({
+  version: 2,
+  voice: process.env.TTS_VOICE?.trim() || 'en-US-AvaNeural',
+  rate: process.env.TTS_RATE?.trim() || '+8%',
+  pitch: process.env.TTS_PITCH?.trim() || '+0Hz',
+});
+
 const voiceFiles = (day: TriviaDay) => {
   const dir = path.join(publicDir, 'generated', `day-${dayLabel(day.day)}`);
   return {
     dir,
+    marker: path.join(dir, 'voice-meta.json'),
     files: [
       'voice-q1.mp3',
       'voice-a1.mp3',
@@ -54,10 +62,11 @@ const runPython = async (args: string[]) => {
 };
 
 export const hasNeuralVoiceover = async (day: TriviaDay) => {
-  const {files} = voiceFiles(day);
+  const {files, marker} = voiceFiles(day);
   try {
     await Promise.all(files.map((file) => fs.access(file)));
-    return true;
+    const actual = await fs.readFile(marker, 'utf8');
+    return actual.trim() === desiredVoiceSignature();
   } catch {
     return false;
   }
@@ -69,7 +78,7 @@ export const ensureNeuralVoiceover = async (day: TriviaDay) => {
   if (await hasNeuralVoiceover(day)) return true;
 
   await fs.mkdir(privateDir, {recursive: true});
-  const {dir} = voiceFiles(day);
+  const {dir, marker} = voiceFiles(day);
   await fs.mkdir(dir, {recursive: true});
 
   const requestFile = path.join(privateDir, `voice-request-${dayLabel(day.day)}.json`);
@@ -88,6 +97,7 @@ export const ensureNeuralVoiceover = async (day: TriviaDay) => {
       requestFile,
       dir,
     ]);
+    await fs.writeFile(marker, desiredVoiceSignature(), 'utf8');
   } finally {
     await fs.rm(requestFile, {force: true});
   }
