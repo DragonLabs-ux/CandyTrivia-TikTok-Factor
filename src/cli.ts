@@ -1,11 +1,12 @@
 import {discoverBufferChannels} from './buffer-channels.js';
+import {renderLocalDay} from './local-render.js';
 import {loadDay, publishRenderedDay, renderDay, runDay} from './pipeline.js';
 
 const command = process.argv[2];
 const files = process.argv.slice(3);
 
 const usage = () => {
-  console.log(`Candy Trivia TikTok Factory\n\nCommands:\n  npm run channels\n  npm run render -- examples/day-001.json\n  npm run publish -- examples/day-001.json\n  npm run run -- examples/day-001.json [examples/day-002.json ...]\n`);
+  console.log(`Candy Trivia TikTok Factory\n\nCommands:\n  npm run channels\n  npm run render -- examples/day-001.json\n  npm run render-local -- examples/day-001.json\n  npm run publish -- examples/day-001.json\n  npm run run -- examples/day-001.json [examples/day-002.json ...]\n`);
 };
 
 const runFiles = async (handler: (day: Awaited<ReturnType<typeof loadDay>>) => Promise<unknown>) => {
@@ -15,7 +16,7 @@ const runFiles = async (handler: (day: Awaited<ReturnType<typeof loadDay>>) => P
     console.log(`DAY ${day.day}: starting`);
     const result = await handler(day);
     console.log(`DAY ${day.day}: complete`);
-    if (command !== 'render') {
+    if (command !== 'render' && command !== 'render-local') {
       const publish = result as {post?: {id?: string; dueAt?: string | null; status?: string | null}};
       if (publish.post?.id) {
         console.log(JSON.stringify({day: day.day, bufferPostId: publish.post.id, scheduledAt: publish.post.dueAt ?? null, status: publish.post.status ?? 'QUEUED'}));
@@ -34,6 +35,9 @@ try {
     }
     case 'render':
       await runFiles(async (day) => ({videoFile: await renderDay(day)}));
+      break;
+    case 'render-local':
+      await runFiles(async (day) => ({videoFile: await renderLocalDay(day)}));
       break;
     case 'publish':
       await runFiles((day) => publishRenderedDay(day));
