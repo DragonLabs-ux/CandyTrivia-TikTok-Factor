@@ -1,0 +1,7 @@
+node_modules/
+.env
+out/
+public/generated/
+public/audio/
+.private/
+.DS_Store
