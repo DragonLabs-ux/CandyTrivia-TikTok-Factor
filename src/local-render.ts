@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {ensurePremiumAudio} from './audio.js';
 import type {TriviaDay} from './pipeline.js';
 import {renderDay} from './pipeline.js';
 
@@ -31,6 +32,10 @@ export const renderLocalDay = async (day: TriviaDay): Promise<string> => {
       'No OpenAI Images API call was made.',
     );
   }
+
+  // Generate the softer premium sound set before Remotion bundles the composition.
+  // These use separate filenames so the legacy fallback tones cannot overwrite them.
+  await ensurePremiumAudio(publicDir);
 
   // renderDay only calls the Images API for missing files. The preflight above guarantees
   // all expected images exist, so this path never spends OpenAI image-generation credits.
