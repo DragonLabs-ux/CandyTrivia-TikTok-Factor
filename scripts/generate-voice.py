@@ -53,8 +53,10 @@ async def main() -> int:
     request = json.loads(request_path.read_text(encoding="utf-8"))
 
     primary_voice = os.environ.get("TTS_VOICE", DEFAULT_VOICE).strip() or DEFAULT_VOICE
-    rate = os.environ.get("TTS_RATE", "+24%").strip() or "+24%"
-    pitch = os.environ.get("TTS_PITCH", "+2Hz").strip() or "+2Hz"
+    # Slower than the original +24% test. +8% keeps the presenter energetic while
+    # giving each question enough breathing room to sound more premium and natural.
+    rate = os.environ.get("TTS_RATE", "+8%").strip() or "+8%"
+    pitch = os.environ.get("TTS_PITCH", "+0Hz").strip() or "+0Hz"
 
     clips = {
         "voice-q1.mp3": request["q1"],
