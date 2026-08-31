@@ -1,6 +1,6 @@
 {
   "name": "candy-trivia-tiktok-factory",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "publish": "tsx src/cli.ts publish",
     "analytics": "tsx src/cli.ts analytics",
     "comments": "tsx src/cli.ts comments",
+    "audit-content": "tsx src/cli.ts audit-content",
     "channels": "tsx src/cli.ts channels",
     "typecheck": "tsc --noEmit"
   },
