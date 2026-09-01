@@ -67,6 +67,11 @@ const getPostMetrics = async (postId: string): Promise<BufferPost> => {
   return result.post;
 };
 
+const isPostNotFound = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  return /post not found for id/i.test(message) || /not found.*post/i.test(message);
+};
+
 const metricKey = (value: string) => value.toLocaleLowerCase().replace(/[^a-z0-9]/g, '');
 const findMetric = (metrics: BufferMetric[], candidates: string[]) => {
   const wanted = new Set(candidates.map(metricKey));
@@ -156,9 +161,49 @@ export const runAnalytics = async (requestedIds: string[] = []) => {
   if (ids.length === 0) throw new Error('No Buffer post IDs found. Publish at least one post first, or run: npm run analytics -- <bufferPostId>');
 
   const rows: Array<Record<string, string | number | null>> = [];
+  let staleCount = 0;
+
   for (const id of ids) {
-    const post = await getPostMetrics(id);
     const manifestEntry = manifestByPostId.get(id);
+    let post: BufferPost;
+
+    try {
+      post = await getPostMetrics(id);
+    } catch (error) {
+      if (!isPostNotFound(error)) throw error;
+
+      staleCount += 1;
+      const checkedAt = new Date().toISOString();
+      await appendHistory({
+        checkedAt,
+        bufferPostId: id,
+        day: manifestEntry?.day ?? null,
+        status: 'NOT_FOUND',
+        sentAt: null,
+        dueAt: manifestEntry?.scheduledAt ?? null,
+        metricsUpdatedAt: null,
+        metrics: [],
+        score: null,
+        rating: 'STALE LOCAL ID',
+      });
+
+      rows.push({
+        day: manifestEntry?.day ?? '-',
+        postId: id,
+        status: 'not_found',
+        window: 'stale local ID',
+        views: null,
+        engPct: null,
+        comments: null,
+        shares: null,
+        follows: null,
+        score: null,
+        rating: 'STALE LOCAL ID',
+        metricsUpdated: '-',
+      });
+      continue;
+    }
+
     const ageHours = hoursSince(post.sentAt ?? post.dueAt ?? manifestEntry?.scheduledAt ?? null);
     const scored = applyFreshnessGuard(scorePost(post), ageHours);
 
@@ -178,6 +223,9 @@ export const runAnalytics = async (requestedIds: string[] = []) => {
 
   console.table(rows);
   console.log(`\nSaved analytics snapshots to ${path.relative(root, historyFile)}`);
+  if (staleCount > 0) {
+    console.log(`Ignored ${staleCount} stale Buffer post ID(s) that no longer exist. Historical manifest entries were preserved for duplicate protection.`);
+  }
   console.log('Fresh zero-only metrics are treated as COLLECTING DATA until the first 24-hour window passes.');
   return rows;
 };
