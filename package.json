@@ -12,6 +12,7 @@
     "comments": "tsx src/cli.ts comments",
     "audit-content": "tsx src/cli.ts audit-content",
     "channels": "tsx src/cli.ts channels",
+    "cleanup-duplicates": "node scripts/cleanup-buffer-duplicates.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
