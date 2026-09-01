@@ -2,6 +2,23 @@
 
 Standalone production pipeline for the Candy Trivia TikTok channel.
 
+## Daily operation — one command
+
+The normal operator workflow is now one Python script:
+
+```powershell
+cd "C:\Users\perry\AI\ChatGPT\CandyTrivia-TikTok-Factor"
+python .\candy_autopilot.py
+```
+
+For a safety-only preview that renders, publishes, and deletes nothing:
+
+```powershell
+python .\candy_autopilot.py --dry-run
+```
+
+`candy_autopilot.py` updates the project, typechecks, audits trivia for repeats, checks Buffer for duplicate scheduled copies, selects the correct campaign date, skips already-sent or uncertain posts, renders only new videos, publishes with two-phase duplicate protection, and runs analytics. Sent TikTok posts are never deleted and uncertain publishes are never automatically retried.
+
 ## Pipeline
 
 `trivia JSON -> local/ChatGPT candy artwork -> neural voice + premium SFX -> Remotion MP4 -> Cloudflare R2 -> Buffer -> TikTok -> analytics`
