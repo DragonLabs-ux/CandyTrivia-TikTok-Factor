@@ -28,9 +28,9 @@ export const renderLocalDay = async (day: TriviaDay): Promise<string> => {
   }
 
   if (missing.length > 0) {
-    throw new Error(
-      `Local-image render requires all three pre-generated images. Missing: ${missing.join(', ')}. ` +
-      'No OpenAI Images API call was made.',
+    console.log(
+      `Using repository-owned vector environments for missing optional artwork: ${missing.join(', ')}. ` +
+      'No paid image API call was made.',
     );
   }
 
@@ -44,7 +44,5 @@ export const renderLocalDay = async (day: TriviaDay): Promise<string> => {
     throw new Error('Premium neural voiceover generation did not produce all required audio clips.');
   }
 
-  // renderDay only calls the Images API for missing files. The preflight above guarantees
-  // all expected images exist, so this path never spends OpenAI image-generation credits.
-  return renderDay(day);
+  return renderDay(day, {withVoiceover: voiceReady});
 };

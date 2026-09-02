@@ -1,215 +1,165 @@
 import React from 'react';
-import {AbsoluteFill, interpolate, useCurrentFrame} from 'remotion';
+import {
+  AbsoluteFill,
+  Easing,
+  Img,
+  Interactive,
+  interpolate,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from 'remotion';
+import {CANDY_THEMES, type VisualTemplate} from './candy-theme.js';
 
-type Palette = {
-  skyA: string;
-  skyB: string;
-  glow: string;
-  hillA: string;
-  hillB: string;
-  accentA: string;
-  accentB: string;
-  accentC: string;
-};
-
-const palettes: Palette[] = [
-  {
-    skyA: '#5a37e6',
-    skyB: '#ff62c7',
-    glow: '#79e9ff',
-    hillA: '#ff4fb2',
-    hillB: '#7c46ef',
-    accentA: '#ff5ba8',
-    accentB: '#5ce9ff',
-    accentC: '#ffd65a',
-  },
-  {
-    skyA: '#168edc',
-    skyB: '#7d4be8',
-    glow: '#ff9edc',
-    hillA: '#25d9cf',
-    hillB: '#5556e9',
-    accentA: '#58e7ff',
-    accentB: '#ff6cbf',
-    accentC: '#ffe36f',
-  },
-  {
-    skyA: '#8b35dc',
-    skyB: '#ef4c9c',
-    glow: '#ffcf74',
-    hillA: '#a8df42',
-    hillB: '#6f38d7',
-    accentA: '#ff7b52',
-    accentB: '#b7f54a',
-    accentC: '#ff62bd',
-  },
-];
-
-const hash01 = (seed: number) => {
+const seeded = (seed: number) => {
   const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
   return value - Math.floor(value);
 };
 
-const GlossyOrb: React.FC<{
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  drift: number;
-}> = ({x, y, size, color, drift}) => {
+const Cloud: React.FC<{index: number; template: VisualTemplate}> = ({index, template}) => {
   const frame = useCurrentFrame();
-  const bob = Math.sin((frame + drift * 17) / 18) * 12;
+  const {durationInFrames} = useVideoConfig();
+  const baseX = [-110, 650, 120][index % 3];
+  const baseY = [215, 330, 520][index % 3];
+  const scale = [1.05, 0.72, 0.55][index % 3];
+  const direction = index % 2 === 0 ? 1 : -1;
+  const opacity = template === 'B' ? 0.08 : template === 'C' ? 0.22 : 0.38;
+
   return (
     <div
       style={{
-        position: 'absolute',
-        left: x,
-        top: y + bob,
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: `radial-gradient(circle at 30% 24%, rgba(255,255,255,.98) 0 7%, rgba(255,255,255,.32) 8% 18%, ${color} 42%, #4a177d 115%)`,
-        border: '3px solid rgba(255,255,255,.5)',
-        boxShadow: `0 18px 42px rgba(23,0,55,.36), inset -15px -18px 30px rgba(42,0,70,.3), 0 0 28px ${color}66`,
-        opacity: 0.94,
+        position: 'absolute', left: baseX, top: baseY, width: 410, height: 145,
+        opacity, filter: template === 'B' ? 'blur(9px)' : 'blur(1px)', scale,
+        translate: interpolate(
+          frame,
+          [0, Math.max(1, durationInFrames - 1)],
+          [`${-22 * direction}px 0px`, `${30 * direction}px -8px`],
+          {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.37, 0, 0.63, 1)},
+        ),
+      }}
+    >
+      {[{x: 0, y: 66, w: 330, h: 70}, {x: 52, y: 28, w: 130, h: 104}, {x: 145, y: 0, w: 150, h: 132}, {x: 268, y: 45, w: 118, h: 88}].map((piece, pieceIndex) => (
+        <div
+          key={pieceIndex}
+          style={{
+            position: 'absolute', left: piece.x, top: piece.y, width: piece.w, height: piece.h,
+            borderRadius: 999, background: template === 'C' ? '#fff5dc' : '#ffffff',
+            boxShadow: 'inset 0 -12px 20px rgba(135, 63, 154, .12), 0 15px 30px rgba(42, 9, 80, .12)',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+const CandyParticle: React.FC<{index: number; day: number; template: VisualTemplate}> = ({index, day, template}) => {
+  const frame = useCurrentFrame();
+  const theme = CANDY_THEMES[template];
+  const seed = day * 97 + index * 41 + template.charCodeAt(0);
+  const x = 35 + seeded(seed) * 970;
+  const y = 125 + seeded(seed + 1) * 1570;
+  const size = 7 + seeded(seed + 2) * 15;
+  const palette = [theme.accent, theme.accent2, theme.accent3, '#ffffff'];
+  const shape = index % 3;
+
+  return (
+    <div
+      style={{
+        position: 'absolute', left: x, top: y,
+        width: shape === 1 ? size * 1.65 : size, height: size,
+        borderRadius: shape === 0 ? '50%' : shape === 1 ? 999 : 3,
+        background: palette[index % palette.length],
+        boxShadow: `0 0 ${size * 2.4}px ${palette[index % palette.length]}88`,
+        opacity: interpolate(frame % 72, [0, 24, 48, 71], [0.18, 0.7, 0.36, 0.18], {
+          extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.37, 0, 0.63, 1),
+        }),
+        translate: `0px ${Math.sin((frame + seed) / 24) * 13}px`,
+        rotate: `${(frame * (index % 2 === 0 ? 0.35 : -0.28) + seed) % 360}deg`,
       }}
     />
   );
 };
 
-const Lollipop: React.FC<{x: number; y: number; size: number; a: string; b: string; tilt: number}> = ({x, y, size, a, b, tilt}) => {
+const ForegroundCandy: React.FC<{template: VisualTemplate; side: 'left' | 'right'}> = ({template, side}) => {
   const frame = useCurrentFrame();
-  const sway = Math.sin((frame + x) / 28) * 2.4;
+  const theme = CANDY_THEMES[template];
+  const right = side === 'right';
   return (
-    <div style={{position: 'absolute', left: x, top: y, width: size, height: size * 1.9, transform: `rotate(${tilt + sway}deg)`, transformOrigin: '50% 75%'}}>
+    <div
+      style={{
+        position: 'absolute', left: right ? undefined : -54, right: right ? -62 : undefined,
+        bottom: right ? 30 : 92, width: 270, height: 520,
+        rotate: `${(right ? 8 : -9) + Math.sin(frame / 33) * 1.6}deg`,
+        transformOrigin: '50% 100%', opacity: 0.94,
+      }}
+    >
+      <div style={{position: 'absolute', left: 124, top: 155, width: 24, height: 365, borderRadius: 999, background: 'linear-gradient(90deg, #ead8f4, #ffffff 50%, #d3bce0)', boxShadow: '0 18px 35px rgba(38, 6, 65, .3)'}} />
       <div
         style={{
-          position: 'absolute',
-          left: '46%',
-          top: '70%',
-          width: '8%',
-          height: '74%',
-          borderRadius: 99,
-          background: 'linear-gradient(90deg,#f8e8ff,#fff,#e3d1ef)',
-          boxShadow: '0 10px 18px rgba(30,0,60,.28)',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          background: `conic-gradient(${a} 0 12%, #fff 12% 24%, ${b} 24% 38%, #fff 38% 50%, ${a} 50% 63%, #fff 63% 76%, ${b} 76% 88%, #fff 88% 100%)`,
-          border: '7px solid rgba(255,255,255,.78)',
-          boxShadow: '0 22px 50px rgba(34,0,66,.34), inset 0 8px 15px rgba(255,255,255,.5)',
+          position: 'absolute', left: 25, top: 0, width: 220, height: 220, borderRadius: '50%',
+          background: `conic-gradient(${theme.accent} 0 13%, #fff 13% 25%, ${theme.accent2} 25% 38%, #fff 38% 50%, ${theme.accent3} 50% 63%, #fff 63% 75%, ${theme.accent} 75% 88%, #fff 88%)`,
+          border: '12px solid rgba(255,255,255,.88)',
+          boxShadow: 'inset 0 12px 20px rgba(255,255,255,.5), inset 0 -18px 30px rgba(70,20,100,.2), 0 30px 60px rgba(38,8,68,.34)',
         }}
       >
-        <div style={{position: 'absolute', left: '18%', top: '12%', width: '36%', height: '18%', borderRadius: '50%', background: 'rgba(255,255,255,.42)', filter: 'blur(2px)'}} />
+        <div style={{position: 'absolute', left: 38, top: 25, width: 88, height: 35, borderRadius: '50%', background: 'rgba(255,255,255,.48)', rotate: '-20deg'}} />
       </div>
     </div>
   );
 };
 
-const Cloud: React.FC<{x: number; y: number; scale: number; opacity: number}> = ({x, y, scale, opacity}) => {
+export const PremiumCandyBackground: React.FC<{
+  day: number;
+  variant: number;
+  template?: VisualTemplate;
+  backgroundVariant?: string;
+  highContrast?: boolean;
+}> = ({day, variant, template = 'A', backgroundVariant = 'default', highContrast = false}) => {
   const frame = useCurrentFrame();
-  const drift = interpolate(frame, [0, 220], [-18, 20], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-  const circle = (left: number, top: number, width: number, height: number) => (
-    <div style={{position: 'absolute', left, top, width, height, borderRadius: '50%', background: 'rgba(255,255,255,.94)'}} />
-  );
-  return (
-    <div style={{position: 'absolute', left: x + drift, top: y, width: 330 * scale, height: 150 * scale, opacity, filter: 'blur(.4px)', transform: `scale(${scale})`, transformOrigin: 'top left'}}>
-      {circle(10, 65, 260, 70)}
-      {circle(40, 35, 110, 90)}
-      {circle(120, 5, 135, 125)}
-      {circle(210, 42, 90, 82)}
-    </div>
-  );
-};
-
-const Sparkles: React.FC<{day: number; variant: number}> = ({day, variant}) => {
-  const frame = useCurrentFrame();
-  return (
-    <>
-      {Array.from({length: 26}).map((_, i) => {
-        const seed = day * 101 + variant * 37 + i * 19;
-        const x = Math.round(hash01(seed) * 1010);
-        const y = Math.round(hash01(seed + 1) * 1760);
-        const size = 3 + Math.round(hash01(seed + 2) * 7);
-        const pulse = 0.25 + 0.7 * ((Math.sin((frame + seed) / 12) + 1) / 2);
-        return (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: x,
-              top: y,
-              width: size,
-              height: size,
-              borderRadius: '50%',
-              background: '#fff',
-              opacity: pulse,
-              boxShadow: `0 0 ${size * 4}px rgba(255,255,255,.9)`,
-            }}
-          />
-        );
-      })}
-    </>
-  );
-};
-
-const Castle: React.FC<{accent: string}> = ({accent}) => (
-  <div style={{position: 'absolute', left: 350, bottom: 165, width: 380, height: 360, opacity: 0.38, filter: 'drop-shadow(0 25px 35px rgba(40,0,80,.28))'}}>
-    <div style={{position: 'absolute', left: 94, bottom: 0, width: 192, height: 240, borderRadius: '70px 70px 16px 16px', background: `linear-gradient(180deg,#ffb4ec,${accent})`, border: '5px solid rgba(255,255,255,.45)'}} />
-    {[22, 268].map((left) => (
-      <React.Fragment key={left}>
-        <div style={{position: 'absolute', left, bottom: 0, width: 90, height: 205, borderRadius: '42px 42px 10px 10px', background: `linear-gradient(180deg,#ffd2f0,${accent})`, border: '4px solid rgba(255,255,255,.42)'}} />
-        <div style={{position: 'absolute', left: left - 10, bottom: 190, width: 110, height: 115, clipPath: 'polygon(50% 0,100% 100%,0 100%)', background: 'linear-gradient(180deg,#fff1a6,#ff66bd)'}} />
-      </React.Fragment>
-    ))}
-    <div style={{position: 'absolute', left: 132, bottom: 225, width: 116, height: 120, clipPath: 'polygon(50% 0,100% 100%,0 100%)', background: 'linear-gradient(180deg,#fff2a4,#ff66bd)'}} />
-    <div style={{position: 'absolute', left: 160, bottom: 0, width: 62, height: 100, borderRadius: '34px 34px 0 0', background: '#532070', boxShadow: 'inset 0 10px 18px rgba(255,255,255,.14)'}} />
-  </div>
-);
-
-export const PremiumCandyBackground: React.FC<{day: number; variant: number}> = ({day, variant}) => {
-  const frame = useCurrentFrame();
-  const palette = palettes[variant % palettes.length];
-  const sweepX = interpolate(frame, [0, 165], [-260, 1150], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-  const lift = Math.sin(frame / 35) * 9;
+  const {durationInFrames} = useVideoConfig();
+  const theme = CANDY_THEMES[template];
+  const progressEnd = Math.max(1, durationInFrames - 1);
+  const shift = (backgroundVariant.length % 5) * 8;
 
   return (
-    <AbsoluteFill style={{overflow: 'hidden', background: `linear-gradient(165deg, ${palette.skyA} 0%, ${palette.skyB} 58%, #2f165f 118%)`}}>
-      <AbsoluteFill style={{background: `radial-gradient(circle at 50% 32%, ${palette.glow}88 0%, transparent 38%), radial-gradient(circle at 12% 18%, rgba(255,255,255,.33), transparent 24%), radial-gradient(circle at 84% 18%, rgba(255,255,255,.2), transparent 25%)`}} />
-      <Cloud x={-50} y={115} scale={0.88} opacity={0.62} />
-      <Cloud x={720} y={245} scale={0.65} opacity={0.48} />
-      <Cloud x={100} y={430} scale={0.48} opacity={0.3} />
-
-      <div style={{position: 'absolute', left: -180, right: -180, bottom: -320 + lift, height: 840, borderRadius: '50%', background: `radial-gradient(ellipse at 42% 15%, ${palette.hillA} 0 36%, ${palette.hillB} 72%)`, boxShadow: 'inset 0 40px 70px rgba(255,255,255,.18), 0 -30px 80px rgba(255,255,255,.12)'}} />
-      <div style={{position: 'absolute', left: -320, bottom: -260 - lift, width: 820, height: 590, borderRadius: '50%', background: `linear-gradient(160deg, ${palette.accentC}, ${palette.hillA})`, opacity: 0.72, boxShadow: 'inset 0 30px 55px rgba(255,255,255,.25)'}} />
-      <div style={{position: 'absolute', right: -260, bottom: -235 + lift, width: 780, height: 540, borderRadius: '50%', background: `linear-gradient(210deg, ${palette.accentB}, ${palette.hillB})`, opacity: 0.76, boxShadow: 'inset 0 28px 55px rgba(255,255,255,.2)'}} />
-
-      <Castle accent={palette.accentA} />
-      <Lollipop x={75} y={995} size={150} a={palette.accentA} b={palette.accentB} tilt={-8} />
-      <Lollipop x={830} y={915} size={165} a={palette.accentC} b={palette.accentA} tilt={8} />
-      <Lollipop x={130} y={510} size={96} a={palette.accentB} b={palette.accentC} tilt={-6} />
-      <Lollipop x={875} y={520} size={105} a={palette.accentA} b={palette.accentB} tilt={9} />
-
-      {Array.from({length: 12}).map((_, i) => {
-        const seed = day * 67 + variant * 31 + i * 11;
-        const side = i % 2 === 0;
-        const x = side ? 18 + hash01(seed) * 180 : 820 + hash01(seed) * 190;
-        const y = 220 + hash01(seed + 1) * 1380;
-        const size = 34 + hash01(seed + 2) * 72;
-        const colors = [palette.accentA, palette.accentB, palette.accentC];
-        return <GlossyOrb key={i} x={x} y={y} size={size} color={colors[i % colors.length]} drift={seed} />;
-      })}
-
-      <Sparkles day={day} variant={variant} />
-
-      <div style={{position: 'absolute', left: sweepX, top: -120, width: 190, height: 2200, transform: 'rotate(15deg)', background: 'linear-gradient(90deg,transparent,rgba(255,255,255,.17),transparent)', filter: 'blur(18px)', opacity: 0.7}} />
-      <AbsoluteFill style={{boxShadow: 'inset 0 0 180px rgba(25,0,55,.38)', background: 'linear-gradient(180deg,rgba(31,0,63,.08),transparent 30%,transparent 72%,rgba(31,0,63,.25))'}} />
+    <AbsoluteFill name="BG_SKY" style={{overflow: 'hidden', background: theme.sky}}>
+      <Interactive.Div
+        name="BG_LIGHT_RAYS"
+        style={{
+          position: 'absolute', inset: -120, opacity: template === 'B' ? 0.42 : 0.34,
+          background: `repeating-conic-gradient(from ${-18 + variant * 7}deg at 50% 13%, transparent 0deg 9deg, ${theme.ambient}25 10deg 15deg, transparent 16deg 28deg)`,
+          rotate: interpolate(frame, [0, progressEnd], ['-2deg', '2deg'], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.37, 0, 0.63, 1)}),
+        }}
+      />
+      <Interactive.Div
+        name="BG_AMBIENT_GLOW"
+        style={{position: 'absolute', inset: 0, background: `radial-gradient(circle at ${50 + shift}% 24%, ${theme.ambient}88 0%, transparent 34%), radial-gradient(circle at 14% 64%, ${theme.accent}55 0%, transparent 30%), radial-gradient(circle at 92% 67%, ${theme.accent2}55 0%, transparent 28%)`, opacity: highContrast ? 0.48 : 0.82}}
+      />
+      {[0, 1, 2].map((index) => <Cloud key={index} index={index} template={template} />)}
+      <Interactive.Div
+        name="BG_KINGDOM"
+        style={{
+          position: 'absolute', left: -36, width: 1152, height: 960,
+          bottom: template === 'B' ? 70 : 105, opacity: template === 'B' ? 0.62 : 0.8,
+          translate: interpolate(frame, [0, progressEnd], ['-8px 10px', '10px -8px'], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.37, 0, 0.63, 1)}),
+          scale: interpolate(frame, [0, progressEnd], [1.01, 1.045], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.37, 0, 0.63, 1), output: 'perceptual-scale'}),
+          filter: `drop-shadow(0 34px 45px rgba(39, 8, 70, .28)) saturate(${highContrast ? 1.25 : 1.08})`,
+        }}
+      >
+        <Img src={staticFile(theme.backgroundAsset)} style={{width: '100%', height: '100%', objectFit: 'contain'}} />
+      </Interactive.Div>
+      <Interactive.Div name="BG_PARTICLES" style={{position: 'absolute', inset: 0, opacity: highContrast ? 0.45 : 0.82}}>
+        {Array.from({length: 24}).map((_, index) => <CandyParticle key={index} index={index} day={day + variant * 3} template={template} />)}
+      </Interactive.Div>
+      <Interactive.Div name="BG_FOREGROUND" style={{position: 'absolute', inset: 0, pointerEvents: 'none'}}>
+        <ForegroundCandy template={template} side="left" />
+        <ForegroundCandy template={template} side="right" />
+      </Interactive.Div>
+      <Interactive.Div
+        name="BG_CAMERA_LIGHT"
+        style={{position: 'absolute', left: interpolate(frame, [0, progressEnd], [-360, 1180], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}), top: -180, width: 180, height: 2320, rotate: '14deg', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent)', filter: 'blur(22px)', opacity: template === 'B' ? 0.34 : 0.55}}
+      />
+      <AbsoluteFill style={{background: highContrast ? 'rgba(3,4,18,.24)' : 'linear-gradient(180deg, rgba(21,4,51,.1), transparent 34%, transparent 68%, rgba(26,5,48,.35))', boxShadow: 'inset 0 0 170px rgba(25, 5, 55, .38)'}} />
     </AbsoluteFill>
   );
 };

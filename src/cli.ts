@@ -3,13 +3,13 @@ import {discoverBufferChannels} from './buffer-channels.js';
 import {recordPendingComment, runPendingComments} from './comments.js';
 import {assertUniquePublication, auditContentFiles, recordPublishedContent} from './dedupe.js';
 import {renderLocalDay} from './local-render.js';
-import {loadDay, publishRenderedDay, renderDay, runDay} from './pipeline.js';
+import {loadDay, publishRenderedDay, renderDay, renderReviewDay, runDay} from './pipeline.js';
 
 const command = process.argv[2];
 const files = process.argv.slice(3);
 
 const usage = () => {
-  console.log(`Candy Trivia TikTok Factory\n\nCommands:\n  npm run channels\n  npm run analytics\n  npm run analytics -- <bufferPostId> [bufferPostId ...]\n  npm run comments\n  npm run comments -- <bufferPostId> [bufferPostId ...]\n  npm run audit-content\n  npm run audit-content -- examples/auto/post-001.json [more files ...]\n  npm run render -- examples/day-001.json\n  npm run render-local -- examples/day-001.json\n  npm run publish -- examples/day-001.json\n  npm run run -- examples/day-001.json [examples/day-002.json ...]\n`);
+  console.log(`Candy Trivia TikTok Factory\n\nCommands:\n  npm run channels\n  npm run analytics\n  npm run analytics -- <bufferPostId> [bufferPostId ...]\n  npm run comments\n  npm run comments -- <bufferPostId> [bufferPostId ...]\n  npm run audit-content\n  npm run audit-content -- examples/auto/post-001.json [more files ...]\n  npm run render-previews -- examples/day-001.json\n  npm run render -- examples/day-001.json\n  npm run render-local -- examples/day-001.json\n  npm run publish -- examples/day-001.json\n  npm run run -- examples/day-001.json [examples/day-002.json ...]\n`);
 };
 
 const runFiles = async (handler: (day: Awaited<ReturnType<typeof loadDay>>) => Promise<unknown>) => {
@@ -60,6 +60,9 @@ try {
       break;
     case 'render-local':
       await runFiles(async (day) => ({videoFile: await renderLocalDay(day)}));
+      break;
+    case 'render-previews':
+      await runFiles(async (day) => ({previews: await renderReviewDay(day)}));
       break;
     case 'publish':
       await runFiles((day) => publishAndQueueComment(day));

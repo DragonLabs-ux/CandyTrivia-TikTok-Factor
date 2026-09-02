@@ -23,6 +23,24 @@ python .\candy_autopilot.py --dry-run
 
 `trivia JSON -> local/ChatGPT candy artwork -> neural voice + premium SFX -> Remotion MP4 -> Cloudflare R2 -> Buffer -> TikTok -> analytics`
 
+## Super-premium visual system
+
+The production renderer now includes three selectable 1080x1920 Remotion templates:
+
+- `A` — Candy Kingdom Quiz Show (recommended default)
+- `B` — Neon Candy Arcade
+- `C` — Nostalgic Candy Shop
+
+All three use the same post data, timing model, captions, score/progress HUD, color-blind-safe answer states, and TikTok safe areas. The renderer uses repository-owned vector environments and icons by default. Existing `public/generated/day-NNN/q1.png`, `q2.png`, and `q3.png` files remain optional texture layers.
+
+Render all three 540x960 comparison previews plus hook, question, reveal, and CTA frames without publishing:
+
+```powershell
+npm.cmd run render-previews -- examples\day-001.json
+```
+
+Outputs are written to `out\review\`. This command does not upload, schedule, call Buffer, or publish.
+
 ## What it does
 
 - Renders vertical 1080x1920 TikTok trivia videos.
@@ -30,7 +48,8 @@ python .\candy_autopilot.py --dry-run
 - Never passes the Q3 answer into the public video composition.
 - Stores the withheld Q3 answer only in a local gitignored `.private/answers.jsonl` file.
 - Validates captions are under 120 characters and contain exactly 4 hashtags.
-- Supports zero-image-credit `render-local` mode using pre-generated/local q1/q2/q3 artwork.
+- Supports zero-image-credit `render-local` mode using repository-owned vector scenes, with optional pre-generated q1/q2/q3 artwork.
+- Burns readable captions into every scene and writes a matching `.srt` beside the production MP4.
 - Generates premium layered sound effects locally.
 - Generates neural narration automatically for local renders using Edge neural TTS through Python.
 - Uploads finished MP4s to Cloudflare R2.
@@ -84,7 +103,7 @@ Copy the TikTok channel ID into `BUFFER_TIKTOK_CHANNEL_ID` in `.env`.
 
 ## Zero-credit local render
 
-Place:
+Optional local artwork may be placed at:
 
 ```text
 public/generated/day-001/q1.png
@@ -92,13 +111,13 @@ public/generated/day-001/q2.png
 public/generated/day-001/q3.png
 ```
 
-Then run:
+If these files are absent, the renderer uses its built-in vector environments and makes no paid image call. Then run:
 
 ```powershell
 npm run render-local -- examples/day-001.json
 ```
 
-The command refuses to call the OpenAI Images API when local images are required and missing.
+Paid image generation is disabled by default. It is available only when `OPENAI_IMAGES_ENABLED=1` is explicitly set in the local environment.
 
 ## Publish a rendered post
 
@@ -135,12 +154,22 @@ The initial score uses available views, engagement rate, comments, shares, and f
 ```json
 {
   "day": 1,
-  "q1": {"question": "How many books are in the King James Bible?", "answer": "66"},
-  "q2": {"question": "How many hearts does an octopus have?", "answer": "3"},
+  "postId": "001",
+  "visualTemplate": "A",
+  "hook": "Can you go 3 for 3?",
+  "q1": {"question": "How many books are in the King James Bible?", "answer": "66", "answers": ["39", "66", "73", "81"]},
+  "q2": {"question": "How many hearts does an octopus have?", "answer": "3", "answers": ["1", "2", "3", "4"]},
   "q3": {"question": "What was the first thing God created on day one?", "answer": "Light", "withhold": true},
+  "cta": "Drop your final answer",
+  "backgroundVariant": "candy-castle",
+  "mascotVariant": "crown-host",
+  "highContrast": false,
+  "colorBlindMode": true,
   "caption": "Can you get all 3? #trivia #quiztime #triviachallenge #funfacts"
 }
 ```
+
+Legacy post JSON remains valid when the new visual fields or four-answer arrays are omitted. Template A is selected automatically, and numeric answers receive deterministic fallback choices. Q3's answer is never passed to the public composition.
 
 Optional exact scheduling can be supplied with an offset-aware ISO timestamp:
 

@@ -73,7 +73,9 @@ const writeLayeredWav = async (
     buffer.writeInt16LE(Math.round(softened * 32767), 44 + i * 2);
   }
 
-  await fs.writeFile(output, buffer);
+  const temporary = `${output}.${process.pid}.${Math.random().toString(16).slice(2)}.tmp`;
+  await fs.writeFile(temporary, buffer);
+  await fs.rename(temporary, output);
 };
 
 export const ensurePremiumAudio = async (publicDir: string) => {
