@@ -58,6 +58,11 @@ jobs:
       - name: Install neural narration dependency
         run: python -m pip install "edge-tts>=7,<8"
 
+      - name: Install media validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
       - name: Test production runner
         run: python -m unittest discover -s tests -v
 
