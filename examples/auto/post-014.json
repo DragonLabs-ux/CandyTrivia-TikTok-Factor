@@ -1,0 +1,24 @@
+{
+  "day": 14,
+  "q1": {
+    "question": "Which animal is famous for building dams?",
+    "answer": "Beaver"
+  },
+  "q2": {
+    "question": "What is the largest country in the world by area?",
+    "answer": "Russia"
+  },
+  "q3": {
+    "question": "What is the capital of Nevada?",
+    "answer": "Carson City",
+    "withhold": true
+  },
+  "caption": "Most people miss one of these \ud83d\udc40 #trivia #quiztok #challenge #iphone",
+  "scheduledAt": "2026-09-05T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 5,
+    "slot": 2,
+    "format": "hard-challenge",
+    "goal": "comments"
+  }
+}

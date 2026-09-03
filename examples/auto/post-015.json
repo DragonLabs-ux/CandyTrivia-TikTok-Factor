@@ -1,0 +1,24 @@
+{
+  "day": 15,
+  "q1": {
+    "question": "What is the capital of Poland?",
+    "answer": "Warsaw"
+  },
+  "q2": {
+    "question": "How many cents are in one U.S. dollar?",
+    "answer": "100"
+  },
+  "q3": {
+    "question": "How many colors are traditionally named in a rainbow?",
+    "answer": "7",
+    "withhold": true
+  },
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun \ud83c\udf6d #trivia #mobilegames #quiztok #iphone",
+  "scheduledAt": "2026-09-05T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 5,
+    "slot": 3,
+    "format": "app-experiment",
+    "goal": "downloads"
+  }
+}

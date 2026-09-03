@@ -1,0 +1,24 @@
+{
+  "day": 19,
+  "q1": {
+    "question": "What is the capital of California?",
+    "answer": "Sacramento"
+  },
+  "q2": {
+    "question": "What is the capital of Austria?",
+    "answer": "Vienna"
+  },
+  "q3": {
+    "question": "Which continent is Egypt in?",
+    "answer": "Africa",
+    "withhold": true
+  },
+  "caption": "Can you go 3/3? Trivia Candy Fun \ud83c\udf6d #trivia #quiztok #games #iphone",
+  "scheduledAt": "2026-09-07T09:00:00-07:00",
+  "meta": {
+    "calendarDay": 7,
+    "slot": 1,
+    "format": "fast-easy",
+    "goal": "reach"
+  }
+}

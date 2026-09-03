@@ -1,0 +1,24 @@
+{
+  "day": 32,
+  "q1": {
+    "question": "What planet is known as the Red Planet?",
+    "answer": "Mars"
+  },
+  "q2": {
+    "question": "What is the capital of Portugal?",
+    "answer": "Lisbon"
+  },
+  "q3": {
+    "question": "What is the capital of Ohio?",
+    "answer": "Columbus",
+    "withhold": true
+  },
+  "caption": "Most people miss one of these \ud83d\udc40 #trivia #quiztok #challenge #iphone",
+  "scheduledAt": "2026-09-11T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 11,
+    "slot": 2,
+    "format": "hard-challenge",
+    "goal": "comments"
+  }
+}

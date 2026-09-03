@@ -1,0 +1,24 @@
+{
+  "day": 42,
+  "q1": {
+    "question": "What is 13 multiplied by 2?",
+    "answer": "26"
+  },
+  "q2": {
+    "question": "What is the capital of Germany?",
+    "answer": "Berlin"
+  },
+  "q3": {
+    "question": "Which month has the fewest days?",
+    "answer": "February",
+    "withhold": true
+  },
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun \ud83c\udf6d #trivia #mobilegames #quiztok #iphone",
+  "scheduledAt": "2026-09-14T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 14,
+    "slot": 3,
+    "format": "app-experiment",
+    "goal": "downloads"
+  }
+}

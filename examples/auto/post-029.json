@@ -1,0 +1,24 @@
+{
+  "day": 29,
+  "q1": {
+    "question": "Which continent has the most countries?",
+    "answer": "Africa"
+  },
+  "q2": {
+    "question": "What is the capital of France?",
+    "answer": "Paris"
+  },
+  "q3": {
+    "question": "What is the capital of North Dakota?",
+    "answer": "Bismarck",
+    "withhold": true
+  },
+  "caption": "Most people miss one of these \ud83d\udc40 #trivia #quiztok #challenge #iphone",
+  "scheduledAt": "2026-09-10T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 10,
+    "slot": 2,
+    "format": "hard-challenge",
+    "goal": "comments"
+  }
+}

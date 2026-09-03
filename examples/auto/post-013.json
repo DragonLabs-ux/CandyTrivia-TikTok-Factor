@@ -1,0 +1,24 @@
+{
+  "day": 13,
+  "q1": {
+    "question": "What is the capital of Norway?",
+    "answer": "Oslo"
+  },
+  "q2": {
+    "question": "Which animal is famous for black and white stripes?",
+    "answer": "Zebra"
+  },
+  "q3": {
+    "question": "What is the capital of Illinois?",
+    "answer": "Springfield",
+    "withhold": true
+  },
+  "caption": "Can you go 3/3? Trivia Candy Fun \ud83c\udf6d #trivia #quiztok #games #iphone",
+  "scheduledAt": "2026-09-05T09:00:00-07:00",
+  "meta": {
+    "calendarDay": 5,
+    "slot": 1,
+    "format": "fast-easy",
+    "goal": "reach"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "day": 26,
+  "q1": {
+    "question": "What is the capital of West Virginia?",
+    "answer": "Charleston"
+  },
+  "q2": {
+    "question": "What is 17 multiplied by 6?",
+    "answer": "102"
+  },
+  "q3": {
+    "question": "What shape has three sides?",
+    "answer": "Triangle",
+    "withhold": true
+  },
+  "caption": "Most people miss one of these \ud83d\udc40 #trivia #quiztok #challenge #iphone",
+  "scheduledAt": "2026-09-09T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 9,
+    "slot": 2,
+    "format": "hard-challenge",
+    "goal": "comments"
+  }
+}

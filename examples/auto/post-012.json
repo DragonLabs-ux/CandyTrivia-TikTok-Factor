@@ -1,0 +1,24 @@
+{
+  "day": 12,
+  "q1": {
+    "question": "Which planet is famous for its rings?",
+    "answer": "Saturn"
+  },
+  "q2": {
+    "question": "What is 8 multiplied by 4?",
+    "answer": "32"
+  },
+  "q3": {
+    "question": "Which continent contains the Sahara Desert?",
+    "answer": "Africa",
+    "withhold": true
+  },
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun \ud83c\udf6d #trivia #mobilegames #quiztok #iphone",
+  "scheduledAt": "2026-09-04T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 4,
+    "slot": 3,
+    "format": "app-experiment",
+    "goal": "downloads"
+  }
+}

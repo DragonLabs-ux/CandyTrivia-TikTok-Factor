@@ -1,0 +1,24 @@
+{
+  "day": 8,
+  "q1": {
+    "question": "What is the brightest planet commonly visible from Earth?",
+    "answer": "Venus"
+  },
+  "q2": {
+    "question": "What is the capital of Czech Republic?",
+    "answer": "Prague"
+  },
+  "q3": {
+    "question": "What is the capital of New Jersey?",
+    "answer": "Trenton",
+    "withhold": true
+  },
+  "caption": "Most people miss one of these \ud83d\udc40 #trivia #quiztok #challenge #iphone",
+  "scheduledAt": "2026-09-03T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 3,
+    "slot": 2,
+    "format": "hard-challenge",
+    "goal": "comments"
+  }
+}

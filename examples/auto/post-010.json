@@ -1,0 +1,24 @@
+{
+  "day": 10,
+  "q1": {
+    "question": "What is the capital of Virginia?",
+    "answer": "Richmond"
+  },
+  "q2": {
+    "question": "What gas do plants absorb from the air?",
+    "answer": "Carbon dioxide"
+  },
+  "q3": {
+    "question": "Which blood cells help fight infection?",
+    "answer": "White blood cells",
+    "withhold": true
+  },
+  "caption": "Can you go 3/3? Trivia Candy Fun \ud83c\udf6d #trivia #quiztok #games #iphone",
+  "scheduledAt": "2026-09-04T09:00:00-07:00",
+  "meta": {
+    "calendarDay": 4,
+    "slot": 1,
+    "format": "fast-easy",
+    "goal": "reach"
+  }
+}
