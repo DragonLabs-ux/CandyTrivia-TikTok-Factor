@@ -1,0 +1,245 @@
+name: Candy Trivia A-B Production Validation
+
+on:
+  push:
+    branches:
+      - validation/ab-production-20260902
+    paths:
+      - .github/workflows/ab-production-validation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      OPENAI_IMAGES_ENABLED: "0"
+      TTS_ENABLED: "1"
+      TTS_VOICE: en-US-AvaNeural
+      TTS_RATE: +8%
+      TTS_PITCH: +0Hz
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+      CI: "true"
+    steps:
+      - name: Check out approved Candy branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        shell: pwsh
+        run: npm.cmd ci
+
+      - name: Confirm FFmpeg tools
+        shell: pwsh
+        run: |
+          ffmpeg -version | Select-Object -First 1
+          ffprobe -version | Select-Object -First 1
+
+      - name: Typecheck
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out\validation | Out-Null
+          npm.cmd run typecheck 2>&1 | Tee-Object -FilePath out\validation\typecheck.txt
+          if ($LASTEXITCODE -ne 0) { throw "Typecheck failed." }
+
+      - name: Complete campaign content audit
+        shell: pwsh
+        run: |
+          npm.cmd run audit-content 2>&1 | Tee-Object -FilePath out\validation\campaign-audit.txt
+          if ($LASTEXITCODE -ne 0) { throw "Campaign content audit failed." }
+
+      - name: Verify template policy without changing campaign files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $check = @'
+          import {normalizeTemplate} from '../../src/candy-theme.ts';
+          if (normalizeTemplate(undefined) !== 'A') throw new Error('Missing visualTemplate must default to A');
+          if (normalizeTemplate('A') !== 'A') throw new Error('A did not normalize to A');
+          if (normalizeTemplate('B') !== 'B') throw new Error('B did not normalize to B');
+          if (normalizeTemplate('C') !== 'C') throw new Error('C must remain selectable');
+          console.log('PASS: default=A; B selectable; C selectable');
+          '@
+          Set-Content -Path out\validation\template-policy-check.ts -Value $check -Encoding utf8
+          npx.cmd tsx out\validation\template-policy-check.ts 2>&1 | Tee-Object -FilePath out\validation\template-policy.txt
+          if ($LASTEXITCODE -ne 0) { throw "Template policy check failed." }
+
+          $cFiles = @()
+          Get-ChildItem examples\auto\*.json | ForEach-Object {
+            $json = Get-Content $_.FullName -Raw | ConvertFrom-Json
+            if ($json.visualTemplate -eq 'C') { $cFiles += $_.Name }
+          }
+          if ($cFiles.Count -gt 0) {
+            throw "Template C appears in the initial automated campaign: $($cFiles -join ', ')"
+          }
+          "PASS: Template C is not assigned in examples/auto/*.json" | Tee-Object -FilePath out\validation\template-c-campaign-check.txt
+
+      - name: Render Template A and Template B with identical content and audio
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $baseRaw = Get-Content examples\day-001.json -Raw
+          $a = $baseRaw | ConvertFrom-Json
+          $b = $baseRaw | ConvertFrom-Json
+          $a.visualTemplate = "A"
+          $b.visualTemplate = "B"
+          $a | ConvertTo-Json -Depth 20 | Set-Content out\validation\input-template-a.json -Encoding utf8
+          $b | ConvertTo-Json -Depth 20 | Set-Content out\validation\input-template-b.json -Encoding utf8
+
+          npm.cmd run render-local -- out\validation\input-template-a.json
+          if ($LASTEXITCODE -ne 0) { throw "Template A render failed." }
+          Copy-Item out\candy-trivia-day-001.mp4 out\validation\template-a-production.mp4 -Force
+          Copy-Item out\candy-trivia-day-001.srt out\validation\template-a.srt -Force
+
+          $voiceDir = "public\generated\day-001"
+          $voiceNames = @('voice-q1.mp3','voice-a1.mp3','voice-q2.mp3','voice-a2.mp3','voice-q3.mp3','voice-cta.mp3')
+          $hashesBefore = @{}
+          foreach ($name in $voiceNames) {
+            $file = Join-Path $voiceDir $name
+            if (!(Test-Path $file)) { throw "Missing neural narration clip: $file" }
+            $hashesBefore[$name] = (Get-FileHash $file -Algorithm SHA256).Hash
+          }
+
+          npm.cmd run render-local -- out\validation\input-template-b.json
+          if ($LASTEXITCODE -ne 0) { throw "Template B render failed." }
+          Copy-Item out\candy-trivia-day-001.mp4 out\validation\template-b-production.mp4 -Force
+          Copy-Item out\candy-trivia-day-001.srt out\validation\template-b.srt -Force
+
+          foreach ($name in $voiceNames) {
+            $file = Join-Path $voiceDir $name
+            $after = (Get-FileHash $file -Algorithm SHA256).Hash
+            if ($after -ne $hashesBefore[$name]) { throw "A/B narration mismatch: $name changed between renders." }
+          }
+          "PASS: A and B used byte-identical neural narration clips." | Set-Content out\validation\audio-identity.txt -Encoding utf8
+
+      - name: Validate codecs dimensions fps duration narration margins and SRT
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          function Probe-Video([string]$Path) {
+            $raw = ffprobe -v error -show_entries stream=codec_type,codec_name,width,height,r_frame_rate -show_entries format=duration,size -of json $Path | Out-String
+            if ($LASTEXITCODE -ne 0) { throw "ffprobe failed for $Path" }
+            return ($raw | ConvertFrom-Json)
+          }
+
+          function Probe-Duration([string]$Path) {
+            $value = ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $Path
+            if ($LASTEXITCODE -ne 0) { throw "ffprobe duration failed for $Path" }
+            return [double]::Parse(($value | Select-Object -First 1), [Globalization.CultureInfo]::InvariantCulture)
+          }
+
+          $results = @()
+          foreach ($template in @('a','b')) {
+            $path = "out\validation\template-$template-production.mp4"
+            if (!(Test-Path $path)) { throw "Missing render: $path" }
+            $probe = Probe-Video $path
+            $v = $probe.streams | Where-Object { $_.codec_type -eq 'video' } | Select-Object -First 1
+            $aud = $probe.streams | Where-Object { $_.codec_type -eq 'audio' } | Select-Object -First 1
+            if ($v.width -ne 1080 -or $v.height -ne 1920) { throw "Template $template wrong dimensions: $($v.width)x$($v.height)" }
+            if ($v.r_frame_rate -ne '30/1') { throw "Template $template wrong fps: $($v.r_frame_rate)" }
+            if ($v.codec_name -ne 'h264') { throw "Template $template wrong video codec: $($v.codec_name)" }
+            if ($aud.codec_name -ne 'aac') { throw "Template $template wrong audio codec: $($aud.codec_name)" }
+            $duration = [double]::Parse($probe.format.duration, [Globalization.CultureInfo]::InvariantCulture)
+            if ([Math]::Abs($duration - 31.6) -gt 0.15) { throw "Template $template unexpected duration: $duration" }
+            $size = [int64]$probe.format.size
+            if ($size -lt 1000000) { throw "Template $template file is unexpectedly small: $size" }
+            $srt = "out\validation\template-$template.srt"
+            if (!(Test-Path $srt) -or (Get-Item $srt).Length -lt 100) { throw "Template $template SRT missing or trivial." }
+            $srtText = Get-Content $srt -Raw
+            if ($srtText -notmatch '00:00:27,600 --> 00:00:31,600') { throw "Template $template SRT final CTA cue is not aligned to 27.6-31.6s." }
+            $results += [pscustomobject]@{template=$template.ToUpper(); path=$path; duration=$duration; size=$size; width=$v.width; height=$v.height; fps=$v.r_frame_rate; videoCodec=$v.codec_name; audioCodec=$aud.codec_name; srt=$srt}
+          }
+
+          $voiceDir = "public\generated\day-001"
+          $windows = [ordered]@{
+            'voice-q1.mp3' = 6.02
+            'voice-a1.mp3' = 2.50
+            'voice-q2.mp3' = 6.02
+            'voice-a2.mp3' = 2.50
+            'voice-q3.mp3' = 6.02
+            'voice-cta.mp3' = 3.88
+          }
+          $clipRows = @()
+          foreach ($entry in $windows.GetEnumerator()) {
+            $file = Join-Path $voiceDir $entry.Key
+            $duration = Probe-Duration $file
+            $margin = [Math]::Round(([double]$entry.Value - $duration), 3)
+            if ($margin -lt 0.08) { throw "Narration cutoff risk for $($entry.Key): duration=$duration available=$($entry.Value) margin=$margin" }
+            $clipRows += [pscustomobject]@{clip=$entry.Key; duration=$duration; available=[double]$entry.Value; margin=$margin; sha256=(Get-FileHash $file -Algorithm SHA256).Hash}
+          }
+
+          $sfx = @('premium-question.wav','premium-tick.wav','premium-ding.wav','premium-suspense.wav','premium-final.wav')
+          foreach ($name in $sfx) {
+            $file = Join-Path 'public\audio' $name
+            if (!(Test-Path $file) -or (Get-Item $file).Length -lt 1000) { throw "Missing synchronized premium SFX: $file" }
+          }
+
+          $report = [ordered]@{
+            approvedSourceBranch = 'feature/super-premium-candy-graphics'
+            contentSource = 'examples/day-001.json'
+            paidImageGeneration = $false
+            neuralVoice = $env:TTS_VOICE
+            ttsRate = $env:TTS_RATE
+            ttsPitch = $env:TTS_PITCH
+            templatePolicy = [ordered]@{default='A'; BSelectable=$true; CSelectable=$true; CInInitialCampaign=$false}
+            expectedTimelineSeconds = 31.6
+            cta = [ordered]@{startSeconds=27.6; durationSeconds=4.0; visibleThroughEnd=$true}
+            renders = $results
+            narrationClips = $clipRows
+            sfxFiles = $sfx
+            burnedInText = 'Scene-native question, answer, challenge, and CTA text is rendered into every video frame; SRT sidecars are also emitted.'
+          }
+          $report | ConvertTo-Json -Depth 12 | Set-Content out\validation\validation-report.json -Encoding utf8
+          $results | Format-Table -AutoSize | Out-String | Tee-Object -FilePath out\validation\media-validation.txt
+          $clipRows | Format-Table -AutoSize | Out-String | Tee-Object -FilePath out\validation\narration-validation.txt
+
+      - name: Extract production visual QA frames
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force out\validation\frames | Out-Null
+          $times = @('1.0','7.0','13.5','16.0','20.5','25.0','30.6')
+          foreach ($template in @('a','b')) {
+            foreach ($time in $times) {
+              $safe = $time.Replace('.', '-')
+              ffmpeg -hide_banner -loglevel error -y -ss $time -i "out\validation\template-$template-production.mp4" -frames:v 1 "out\validation\frames\template-$template-$safe.png"
+              if ($LASTEXITCODE -ne 0) { throw "Frame extraction failed for template $template at $time" }
+            }
+          }
+
+      - name: Upload validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: candy-trivia-ab-production-validation
+          path: |
+            out/validation/template-a-production.mp4
+            out/validation/template-b-production.mp4
+            out/validation/template-a.srt
+            out/validation/template-b.srt
+            out/validation/validation-report.json
+            out/validation/media-validation.txt
+            out/validation/narration-validation.txt
+            out/validation/typecheck.txt
+            out/validation/campaign-audit.txt
+            out/validation/template-policy.txt
+            out/validation/template-c-campaign-check.txt
+            out/validation/audio-identity.txt
+            out/validation/frames/*.png
+          if-no-files-found: error
+          retention-days: 14
