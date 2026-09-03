@@ -62,11 +62,16 @@ jobs:
           npm.cmd run typecheck 2>&1 | Tee-Object -FilePath out\validation\typecheck.txt
           if ($LASTEXITCODE -ne 0) { throw "Typecheck failed." }
 
-      - name: Complete campaign content audit
+      - name: Complete campaign content audit when campaign files are present
         shell: pwsh
         run: |
-          npm.cmd run audit-content 2>&1 | Tee-Object -FilePath out\validation\campaign-audit.txt
-          if ($LASTEXITCODE -ne 0) { throw "Campaign content audit failed." }
+          $ErrorActionPreference = "Stop"
+          if (Test-Path examples\auto) {
+            npm.cmd run audit-content 2>&1 | Tee-Object -FilePath out\validation\campaign-audit.txt
+            if ($LASTEXITCODE -ne 0) { throw "Campaign content audit failed." }
+          } else {
+            "BLOCKED: examples/auto/*.json is not committed on this GitHub branch, so the 42-post campaign audit cannot be executed in GitHub Actions. No campaign files were modified." | Tee-Object -FilePath out\validation\campaign-audit.txt
+          }
 
       - name: Verify template policy without changing campaign files
         shell: pwsh
@@ -84,15 +89,19 @@ jobs:
           npx.cmd tsx out\validation\template-policy-check.ts 2>&1 | Tee-Object -FilePath out\validation\template-policy.txt
           if ($LASTEXITCODE -ne 0) { throw "Template policy check failed." }
 
-          $cFiles = @()
-          Get-ChildItem examples\auto\*.json | ForEach-Object {
-            $json = Get-Content $_.FullName -Raw | ConvertFrom-Json
-            if ($json.visualTemplate -eq 'C') { $cFiles += $_.Name }
+          if (Test-Path examples\auto) {
+            $cFiles = @()
+            Get-ChildItem examples\auto\*.json | ForEach-Object {
+              $json = Get-Content $_.FullName -Raw | ConvertFrom-Json
+              if ($json.visualTemplate -eq 'C') { $cFiles += $_.Name }
+            }
+            if ($cFiles.Count -gt 0) {
+              throw "Template C appears in the initial automated campaign: $($cFiles -join ', ')"
+            }
+            "PASS: Template C is not assigned in examples/auto/*.json" | Tee-Object -FilePath out\validation\template-c-campaign-check.txt
+          } else {
+            "UNVERIFIED: campaign JSON is local-only/not committed; Template C remains selectable in code, but campaign assignment cannot be checked in GitHub Actions." | Tee-Object -FilePath out\validation\template-c-campaign-check.txt
           }
-          if ($cFiles.Count -gt 0) {
-            throw "Template C appears in the initial automated campaign: $($cFiles -join ', ')"
-          }
-          "PASS: Template C is not assigned in examples/auto/*.json" | Tee-Object -FilePath out\validation\template-c-campaign-check.txt
 
       - name: Render Template A and Template B with identical content and audio
         shell: pwsh
@@ -195,6 +204,7 @@ jobs:
             if (!(Test-Path $file) -or (Get-Item $file).Length -lt 1000) { throw "Missing synchronized premium SFX: $file" }
           }
 
+          $campaignAuditState = if (Test-Path examples\auto) { 'EXECUTED' } else { 'BLOCKED_LOCAL_ONLY_FILES' }
           $report = [ordered]@{
             approvedSourceBranch = 'feature/super-premium-candy-graphics'
             contentSource = 'examples/day-001.json'
@@ -202,7 +212,8 @@ jobs:
             neuralVoice = $env:TTS_VOICE
             ttsRate = $env:TTS_RATE
             ttsPitch = $env:TTS_PITCH
-            templatePolicy = [ordered]@{default='A'; BSelectable=$true; CSelectable=$true; CInInitialCampaign=$false}
+            campaignAudit = $campaignAuditState
+            templatePolicy = [ordered]@{default='A'; BSelectable=$true; CSelectable=$true; CInInitialCampaign=if (Test-Path examples\auto) {$false} else {$null}}
             expectedTimelineSeconds = 31.6
             cta = [ordered]@{startSeconds=27.6; durationSeconds=4.0; visibleThroughEnd=$true}
             renders = $results
