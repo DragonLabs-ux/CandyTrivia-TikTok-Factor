@@ -64,7 +64,8 @@ const runPython = async (args: string[]) => {
 export const hasNeuralVoiceover = async (day: TriviaDay) => {
   const {files, marker} = voiceFiles(day);
   try {
-    await Promise.all(files.map((file) => fs.access(file)));
+    const stats = await Promise.all(files.map((file) => fs.stat(file)));
+    if (stats.some((stat) => stat.size < 512)) return false;
     const actual = await fs.readFile(marker, 'utf8');
     return actual.trim() === desiredVoiceSignature();
   } catch {

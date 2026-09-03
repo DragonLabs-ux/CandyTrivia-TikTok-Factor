@@ -5,3 +5,5 @@ public/generated/
 public/audio/
 .private/
 .DS_Store
+__pycache__/
+*.pyc

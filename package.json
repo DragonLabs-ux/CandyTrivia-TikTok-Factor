@@ -14,6 +14,7 @@
     "audit-content": "node --import ./scripts/remotion-network-fix.mjs --import tsx src/cli.ts audit-content",
     "channels": "node --import ./scripts/remotion-network-fix.mjs --import tsx src/cli.ts channels",
     "cleanup-duplicates": "node scripts/cleanup-buffer-duplicates.mjs",
+    "validate-production": "python candy_production_validation.py",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

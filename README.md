@@ -41,6 +41,18 @@ npm.cmd run render-previews -- examples\day-001.json
 
 Outputs are written to `out\review\`. This command does not upload, schedule, call Buffer, or publish.
 
+## One-command A/B production validation
+
+Run the approved Template A and B production gate locally, including TypeScript checks, content audit, neural narration, full 1080x1920 renders, MP4 decode checks, SRT checks, narration cutoff checks, and 14 QA frames:
+
+```powershell
+python .\candy_production_validation.py --install
+```
+
+Outputs are written to `out\validation\`. The runner forces paid image generation off and contains no R2, Buffer, TikTok, scheduling, or publishing operation. It also writes a non-mutating 42-post `A, A, B` rotation plan. If `examples\auto\post-*.json` exists, all 42 campaign definitions are audited; otherwise the report clearly marks the campaign audit as pending and audits the premium sample only.
+
+The same runner is available from GitHub Actions as **Candy Premium Production Validation**. Each successful run uploads both full MP4s, both SRTs, the validation reports, the rotation plan, and the QA frames as a downloadable workflow artifact. Paid image generation and publishing remain disabled in CI.
+
 ## What it does
 
 - Renders vertical 1080x1920 TikTok trivia videos.
