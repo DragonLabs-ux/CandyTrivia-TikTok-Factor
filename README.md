@@ -2,9 +2,15 @@
 
 Standalone production pipeline for the Candy Trivia TikTok channel.
 
-## Daily operation — one command
+## Cloud operation from GitHub
 
-The normal operator workflow is now one Python script:
+Open [Candy Python Cloud Autopilot](https://github.com/DragonLabs-ux/CandyTrivia-TikTok-Factor/actions/workflows/candy-cloud.yml) to run a status check, preview the next posts, validate a video, or pause new submissions from a phone or browser. Python calls the existing premium renderer, uploads to R2, and schedules through Buffer for TikTok delivery. After activation, GitHub's hourly timer runs without the Windows PC or an active Codex session.
+
+Publishing starts disabled. Follow the [cloud setup and remote controls runbook](CANDY_CLOUD_RUNBOOK.md) to configure private state storage, import existing history, verify shadow runs, and confirm one canary delivery before enabling unattended publishing. The current campaign ends September 14, 2026; new content needs a reviewed import.
+
+## Local operation before cloud cutover
+
+The existing local publishing command remains available until the cloud migration retires it:
 
 ```powershell
 cd "C:\Users\perry\AI\ChatGPT\CandyTrivia-TikTok-Factor"
@@ -58,7 +64,7 @@ The same runner is available from GitHub Actions as **Candy Premium Production V
 - Renders vertical 1080x1920 TikTok trivia videos.
 - Shows answers for Q1 and Q2 only.
 - Never passes the Q3 answer into the public video composition.
-- Stores the withheld Q3 answer only in a local gitignored `.private/answers.jsonl` file.
+- Records the withheld Q3 answer in local gitignored `.private/answers.jsonl`; answers also exist in the tracked campaign JSON and are not secret outside the video.
 - Validates captions are under 120 characters and contain exactly 4 hashtags.
 - Supports zero-image-credit `render-local` mode using repository-owned vector scenes, with optional pre-generated q1/q2/q3 artwork.
 - Burns readable captions into every scene and writes a matching `.srt` beside the production MP4.
