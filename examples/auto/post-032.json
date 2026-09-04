@@ -13,12 +13,13 @@
     "answer": "Columbus",
     "withhold": true
   },
-  "caption": "Most people miss one of these \ud83d\udc40 #trivia #quiztok #challenge #iphone",
+  "caption": "Most people miss one of these 👀 #trivia #quiztok #challenge #iphone",
   "scheduledAt": "2026-09-11T15:00:00-07:00",
   "meta": {
     "calendarDay": 11,
     "slot": 2,
     "format": "hard-challenge",
     "goal": "comments"
-  }
+  },
+  "visualTemplate": "A"
 }

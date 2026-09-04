@@ -20,5 +20,6 @@
     "slot": 2,
     "format": "hard-challenge",
     "goal": "comments"
-  }
+  },
+  "visualTemplate": "A"
 }

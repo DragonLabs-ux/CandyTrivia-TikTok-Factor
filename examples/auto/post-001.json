@@ -20,5 +20,6 @@
     "slot": 1,
     "format": "fast-easy",
     "goal": "reach"
-  }
+  },
+  "visualTemplate": "A"
 }

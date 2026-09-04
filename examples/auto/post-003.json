@@ -20,5 +20,6 @@
     "slot": 3,
     "format": "app-experiment",
     "goal": "downloads"
-  }
+  },
+  "visualTemplate": "B"
 }

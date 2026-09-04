@@ -13,12 +13,13 @@
     "answer": "Thermometer",
     "withhold": true
   },
-  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun \ud83c\udf6d #trivia #mobilegames #quiztok #iphone",
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun 🍭 #trivia #mobilegames #quiztok #iphone",
   "scheduledAt": "2026-09-11T19:00:00-07:00",
   "meta": {
     "calendarDay": 11,
     "slot": 3,
     "format": "app-experiment",
     "goal": "downloads"
-  }
+  },
+  "visualTemplate": "B"
 }

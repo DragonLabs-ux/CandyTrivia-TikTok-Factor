@@ -13,12 +13,13 @@
     "answer": "White blood cells",
     "withhold": true
   },
-  "caption": "Can you go 3/3? Trivia Candy Fun \ud83c\udf6d #trivia #quiztok #games #iphone",
+  "caption": "Can you go 3/3? Trivia Candy Fun 🍭 #trivia #quiztok #games #iphone",
   "scheduledAt": "2026-09-04T09:00:00-07:00",
   "meta": {
     "calendarDay": 4,
     "slot": 1,
     "format": "fast-easy",
     "goal": "reach"
-  }
+  },
+  "visualTemplate": "A"
 }

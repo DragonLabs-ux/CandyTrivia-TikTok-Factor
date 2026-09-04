@@ -13,12 +13,13 @@
     "answer": "24",
     "withhold": true
   },
-  "caption": "Can you go 3/3? Trivia Candy Fun \ud83c\udf6d #trivia #quiztok #games #iphone",
-  "scheduledAt": "2026-09-03T09:00:00-07:00",
+  "caption": "Can you go 3/3? Trivia Candy Fun 🍭 #trivia #quiztok #games #iphone",
+  "scheduledAt": "2026-09-03T19:30:00-07:00",
   "meta": {
     "calendarDay": 3,
     "slot": 1,
     "format": "fast-easy",
     "goal": "reach"
-  }
+  },
+  "visualTemplate": "A"
 }
