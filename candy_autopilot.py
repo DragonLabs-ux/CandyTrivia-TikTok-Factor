@@ -46,7 +46,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 PROJECT_DEFAULT = Path(r"C:\Users\perry\AI\ChatGPT\CandyTrivia-TikTok-Factor")
-BRANCH = "feature/three-post-autopilot"
+BRANCH = "feature/super-premium-candy-graphics"
 TZ = ZoneInfo("America/Phoenix")
 STATE_REL = Path(".private") / "candy-publisher-state.json"
 POST_RE = re.compile(r"post-(\d{3})\.json$", re.I)
