@@ -12,7 +12,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from candy_cloud import (ROOT, CAMPAIGN, CloudError, MissingState, Buffer, NotFound, R2State,
@@ -107,6 +107,25 @@ def initialize():
     reconcile(store, b)
     report(store.load()[0], posts)
 
+def sync_content():
+    posts = load_campaign()
+    store = R2State()
+
+    def change(s):
+        for key, row in s['posts'].items():
+            if key not in posts or posts[key]['approved_hash'] != row['approved_hash']:
+                raise CloudError('EXISTING_APPROVED_CONTENT_CHANGED')
+        additions = [p for key, p in posts.items() if key not in s['posts']]
+        if additions and min(p['number'] for p in additions) <= max(p['number'] for p in s['posts'].values()):
+            raise CloudError('CONTENT_MUST_BE_APPEND_ONLY')
+        if any(dt(p['scheduled_at']) <= datetime.now(timezone.utc) + timedelta(minutes=45) for p in additions):
+            raise CloudError('NEW_CONTENT_MUST_BE_SCHEDULED_IN_THE_FUTURE')
+        for post in additions:
+            s['posts'][post['id']] = compact_post(post)
+        event(s, 'content_synced')
+        return len(additions)
+    print(f'Approved content appended: {store.change(change)}')
+
 
 def gh(args, value=None):
     result = subprocess.run(['gh', *args], input=value, text=True, encoding='utf-8',
@@ -177,7 +196,7 @@ def promote(store):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command', choices=['configure-github', 'import-history', 'freeze-local', 'activate-canary', 'promote-live'])
+    p.add_argument('command', choices=['configure-github', 'import-history', 'sync-content', 'freeze-local', 'activate-canary', 'promote-live'])
     p.add_argument('--post')
     args = p.parse_args(argv)
     if args.command == 'configure-github':
@@ -189,6 +208,8 @@ def main(argv=None):
             load_local_env()
         if args.command == 'import-history':
             initialize()
+        elif args.command == 'sync-content':
+            sync_content()
         elif args.command == 'activate-canary':
             activate(R2State(), args.post)
         else:

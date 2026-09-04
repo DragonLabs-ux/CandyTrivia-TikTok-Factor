@@ -1,0 +1,25 @@
+name: Candy Approved Content Import
+on:
+  push:
+    branches: [main]
+    paths: ['examples/auto/post-*.json']
+permissions:
+  contents: read
+concurrency:
+  group: candy-cloud-publisher
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    env:
+      BUFFER_TIKTOK_CHANNEL_ID: ${{ secrets.BUFFER_TIKTOK_CHANNEL_ID }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      CANDY_STATE_ACCESS_KEY_ID: ${{ secrets.CANDY_STATE_ACCESS_KEY_ID }}
+      CANDY_STATE_SECRET_ACCESS_KEY: ${{ secrets.CANDY_STATE_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install -r requirements-cloud.txt
+      - run: python -m unittest discover -s tests -v
+      - run: python candy_cloud_admin.py sync-content
