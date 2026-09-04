@@ -34,7 +34,7 @@ def request_json(prompt, schema, name):
     with urllib.request.urlopen(req, timeout=600) as response:
         return json.loads(response_text(json.load(response)))
 
-def verify_question_answers(facts):
+def fact_checks(facts):
     count = len(facts)
     item = {
         'type': 'object',
@@ -43,8 +43,12 @@ def verify_question_answers(facts):
             'question_answer_match': {'type': 'boolean'},
             'answer_factually_supported': {'type': 'boolean'},
             'source_supports_answer': {'type': 'boolean'},
+            'corrected_question': {'anyOf': [{'type': 'string'}, {'type': 'null'}]},
+            'corrected_answer': {'anyOf': [{'type': 'string'}, {'type': 'null'}]},
+            'corrected_source_url': {'anyOf': [{'type': 'string'}, {'type': 'null'}]},
         },
-        'required': ['index', 'question_answer_match', 'answer_factually_supported', 'source_supports_answer'],
+        'required': ['index', 'question_answer_match', 'answer_factually_supported', 'source_supports_answer',
+                     'corrected_question', 'corrected_answer', 'corrected_source_url'],
         'additionalProperties': False,
     }
     schema = {
@@ -58,14 +62,42 @@ def verify_question_answers(facts):
         'Independently fact-check every trivia item below. Use web search and inspect the supplied source. '
         'question_answer_match is true only when the answer directly and unambiguously answers that exact '
         'question. answer_factually_supported is true only when reliable evidence confirms it. '
-        'source_supports_answer is true only when the supplied URL supports the stated answer. Return one '
-        f'check for every index and do not fix or omit failed items. Items: {json.dumps(numbered)}')
-    checks = request_json(prompt, schema, 'candy_fact_checks').get('checks', [])
-    if ({check.get('index') for check in checks} != set(range(count))
-            or any(not all(check.get(field) for field in (
+        'source_supports_answer is true only when the supplied URL supports the stated answer. For a failed '
+        'item, supply a corrected question, answer, and direct reputable source URL. For a passing item, set '
+        f'all corrected fields to null. Return every index. Items: {json.dumps(numbered)}')
+    return request_json(prompt, schema, 'candy_fact_checks').get('checks', [])
+
+def checks_pass(checks, count):
+    return ({check.get('index') for check in checks} == set(range(count))
+            and all(all(check.get(field) for field in (
                 'question_answer_match', 'answer_factually_supported', 'source_supports_answer'))
-                for check in checks)):
+                for check in checks))
+
+def verify_question_answers(facts):
+    checks = fact_checks(facts)
+    if checks_pass(checks, len(facts)):
+        return facts
+    if {check.get('index') for check in checks} != set(range(len(facts))):
         raise CloudError('QUESTION_ANSWER_VERIFICATION_FAILED')
+    corrected = [dict(fact) for fact in facts]
+    for check in checks:
+        if all(check.get(field) for field in (
+                'question_answer_match', 'answer_factually_supported', 'source_supports_answer')):
+            continue
+        replacement = {
+            'question': check.get('corrected_question'),
+            'answer': check.get('corrected_answer'),
+            'source_url': check.get('corrected_source_url'),
+        }
+        if (not all(isinstance(value, str) and value.strip() for value in replacement.values())
+                or not re.match(r'https://', replacement['source_url'])
+                or not (5 <= len(replacement['question']) <= 100)
+                or not (1 <= len(replacement['answer']) <= 45)):
+            raise CloudError('QUESTION_ANSWER_AUTOCORRECT_FAILED')
+        corrected[check['index']] = replacement
+    if not checks_pass(fact_checks(corrected), len(corrected)):
+        raise CloudError('QUESTION_ANSWER_AUTOCORRECT_FAILED')
+    return corrected
 
 def generate(count=21, min_future_days=10):
     posts = load_campaign(); now = datetime.now(TZ)
@@ -86,7 +118,14 @@ def generate(count=21, min_future_days=10):
                     or not (5 <= len(q['question']) <= 100) or not (1 <= len(q['answer']) <= 45)):
                 raise CloudError('INVALID_OR_DUPLICATE_GENERATED_FACT')
             seen.add(n)
-    verify_question_answers(facts)
+    facts = verify_question_answers(facts)
+    seen={' '.join(x.casefold().split()) for x in existing}
+    for q in facts:
+        n=' '.join(q['question'].casefold().split())
+        if (n in seen or not re.match(r'https://', q['source_url'])
+                or not (5 <= len(q['question']) <= 100) or not (1 <= len(q['answer']) <= 45)):
+            raise CloudError('INVALID_OR_DUPLICATE_AUTOCORRECTED_FACT')
+        seen.add(n)
     for i in range(count):
         qs=facts[i*3:i*3+3]
         hour,template=SLOTS[i%3]; when=datetime.combine(start+timedelta(days=i//3),datetime.min.time(),TZ).replace(hour=hour)
