@@ -478,6 +478,8 @@ def main() -> None:
     args = parser.parse_args()
 
     project = project_dir()
+    if not args.dry_run and (project / '.private' / 'cloud-publisher-cutover.json').exists():
+        raise SystemExit('Local publishing retired: use the Candy Python Cloud Autopilot GitHub workflow.')
     load_env_file(project)
     now = datetime.now(TZ)
 

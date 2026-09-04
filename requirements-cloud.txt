@@ -1,0 +1,4 @@
+boto3==1.42.49
+botocore==1.42.97
+edge-tts==7.2.7
+tzdata==2025.3

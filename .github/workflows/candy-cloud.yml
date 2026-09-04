@@ -1,0 +1,113 @@
+name: Candy Python Cloud Autopilot
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Operation (publishing stays disabled until migration and canary pass)
+        type: choice
+        default: shadow
+        options:
+          - status
+          - dry-run
+          - import-history
+          - shadow
+          - render-only
+          - activate-canary
+          - canary
+          - promote-live
+          - refill
+          - analytics
+          - pause
+      post:
+        description: Exact post ID for render-only or canary (candy-premium-2026-09:010)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candy-cloud-publisher
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: github.event_name == 'workflow_dispatch' || vars.CANDY_CLOUD_CONFIGURED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PYTHONUTF8: '1'
+      PYTHONUNBUFFERED: '1'
+      MODE: ${{ inputs.mode || vars.CANDY_CLOUD_MODE || 'shadow' }}
+      POST: ${{ inputs.post }}
+      CANDY_PUBLISHING_ENABLED: ${{ vars.CANDY_PUBLISHING_ENABLED || 'false' }}
+      BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+      BUFFER_TIKTOK_CHANNEL_ID: ${{ secrets.BUFFER_TIKTOK_CHANNEL_ID }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+      CANDY_STATE_ACCESS_KEY_ID: ${{ secrets.CANDY_STATE_ACCESS_KEY_ID }}
+      CANDY_STATE_SECRET_ACCESS_KEY: ${{ secrets.CANDY_STATE_SECRET_ACCESS_KEY }}
+      CANDY_HISTORY_IMPORT_B64: ${{ secrets.CANDY_HISTORY_IMPORT_B64 }}
+      OPENAI_IMAGES_ENABLED: '0'
+      CANDY_PUBLISHING_DISABLED: '1'
+      TTS_ENABLED: '1'
+      TTS_VOICE: en-US-AvaNeural
+      TTS_RATE: +8%
+      TTS_PITCH: +0Hz
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-cloud.txt
+      - name: Install Python runner dependencies
+        run: python -m pip install -r requirements-cloud.txt
+      - name: Test cloud safety and inspect configuration
+        run: |
+          python -m unittest discover -s tests -v
+          python candy_cloud_check.py
+      - uses: actions/setup-node@v4
+        if: contains(fromJSON('["render-only","refill","canary"]'), env.MODE)
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install renderer and validation tools
+        if: contains(fromJSON('["render-only","refill","canary"]'), env.MODE)
+        run: |
+          npm ci
+          npm run typecheck
+          sudo apt-get update -qq
+          sudo apt-get install --yes ffmpeg
+      - name: Run selected Python operation
+        shell: bash
+        run: |
+          case "$MODE" in
+            import-history|activate-canary|promote-live)
+              args=("$MODE")
+              if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
+              python candy_cloud_admin.py "${args[@]}"
+              ;;
+            *)
+              args=(--mode "$MODE")
+              if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
+              python candy_cloud.py "${args[@]}"
+              ;;
+          esac
+      - name: Collect available daily analytics
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          if [[ "$(date -u +%H)" == "08" ]]; then
+            python candy_cloud.py --mode analytics
+          fi
+      - name: Failure guidance
+        if: failure()
+        run: |
+          echo 'Candy needs attention. Inspect the sanitized error above. Never rerun an uncertain Buffer submission without reconciliation.' >> "$GITHUB_STEP_SUMMARY"

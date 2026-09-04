@@ -404,6 +404,15 @@ const recordPublicManifest = async (day: TriviaDay, videoUrl: string, post: Buff
 };
 
 export const publishRenderedDay = async (day: TriviaDay, videoFile?: string) => {
+  if (process.env.CANDY_PUBLISHING_DISABLED === '1') {
+    throw new Error('Publishing is disabled for this process.');
+  }
+  try {
+    await fs.access(path.join(privateDir, 'cloud-publisher-cutover.json'));
+    throw new Error('Local publishing retired: use the Candy Python Cloud Autopilot GitHub workflow.');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   const file = videoFile ?? path.join(outDir, `candy-trivia-day-${dayLabel(day.day)}.mp4`);
   await fs.access(file);
   await recordPrivateAnswer(day);
