@@ -18,6 +18,55 @@ def response_text(payload):
             if part.get('type') == 'output_text': return part['text']
     raise CloudError('CONTENT_RESPONSE_MISSING')
 
+def request_json(prompt, schema, name):
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
+        raise CloudError('MISSING_OPENAI_API_KEY')
+    body = {
+        'model': os.getenv('CANDY_CONTENT_MODEL', 'gpt-5.6-luna'),
+        'tools': [{'type': 'web_search'}],
+        'input': prompt,
+        'text': {'format': {'type': 'json_schema', 'name': name, 'strict': True, 'schema': schema}},
+    }
+    req = urllib.request.Request(
+        'https://api.openai.com/v1/responses', data=json.dumps(body).encode(),
+        headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'})
+    with urllib.request.urlopen(req, timeout=600) as response:
+        return json.loads(response_text(json.load(response)))
+
+def verify_question_answers(facts):
+    count = len(facts)
+    item = {
+        'type': 'object',
+        'properties': {
+            'index': {'type': 'integer'},
+            'question_answer_match': {'type': 'boolean'},
+            'answer_factually_supported': {'type': 'boolean'},
+            'source_supports_answer': {'type': 'boolean'},
+        },
+        'required': ['index', 'question_answer_match', 'answer_factually_supported', 'source_supports_answer'],
+        'additionalProperties': False,
+    }
+    schema = {
+        'type': 'object',
+        'properties': {'checks': {'type': 'array', 'minItems': count, 'maxItems': count, 'items': item}},
+        'required': ['checks'],
+        'additionalProperties': False,
+    }
+    numbered = [{'index': i, **fact} for i, fact in enumerate(facts)]
+    prompt = (
+        'Independently fact-check every trivia item below. Use web search and inspect the supplied source. '
+        'question_answer_match is true only when the answer directly and unambiguously answers that exact '
+        'question. answer_factually_supported is true only when reliable evidence confirms it. '
+        'source_supports_answer is true only when the supplied URL supports the stated answer. Return one '
+        f'check for every index and do not fix or omit failed items. Items: {json.dumps(numbered)}')
+    checks = request_json(prompt, schema, 'candy_fact_checks').get('checks', [])
+    if ({check.get('index') for check in checks} != set(range(count))
+            or any(not all(check.get(field) for field in (
+                'question_answer_match', 'answer_factually_supported', 'source_supports_answer'))
+                for check in checks)):
+        raise CloudError('QUESTION_ANSWER_VERIFICATION_FAILED')
+
 def generate(count=21, min_future_days=10):
     posts = load_campaign(); now = datetime.now(TZ)
     latest = max(datetime.fromisoformat(p['scheduled_at']).astimezone(TZ) for p in posts.values())
@@ -27,12 +76,7 @@ def generate(count=21, min_future_days=10):
     needed=count*3
     schema={'type':'object','properties':{'facts':{'type':'array','minItems':needed,'maxItems':needed,'items':{'type':'object','properties':{'question':{'type':'string'},'answer':{'type':'string'},'source_url':{'type':'string'}},'required':['question','answer','source_url'],'additionalProperties':False}}},'required':['facts'],'additionalProperties':False}
     prompt=f"Create {needed} short, evergreen general-trivia question/answer pairs for a family-friendly TikTok quiz. Verify every answer with web search and give its direct reputable source URL. Avoid trick questions, disputed facts, current officeholders, and these existing questions: {json.dumps(existing)}"
-    body={'model':os.getenv('CANDY_CONTENT_MODEL','gpt-5.6-luna'),'tools':[{'type':'web_search'}],'input':prompt,'text':{'format':{'type':'json_schema','name':'candy_facts','strict':True,'schema':schema}}}
-    api_key = os.environ.get('OPENAI_API_KEY')
-    if not api_key:
-        raise CloudError('MISSING_OPENAI_API_KEY')
-    req=urllib.request.Request('https://api.openai.com/v1/responses',data=json.dumps(body).encode(),headers={'Authorization':'Bearer '+api_key,'Content-Type':'application/json'})
-    with urllib.request.urlopen(req,timeout=600) as r: facts=json.loads(response_text(json.load(r)))['facts']
+    facts = request_json(prompt, schema, 'candy_facts')['facts']
     seen={' '.join(x.casefold().split()) for x in existing}; outputs=[]; next_day=max(p['number'] for p in posts.values())+1; start=latest.date()+timedelta(days=1)
     for i in range(count):
         qs=facts[i*3:i*3+3]
@@ -42,6 +86,9 @@ def generate(count=21, min_future_days=10):
                     or not (5 <= len(q['question']) <= 100) or not (1 <= len(q['answer']) <= 45)):
                 raise CloudError('INVALID_OR_DUPLICATE_GENERATED_FACT')
             seen.add(n)
+    verify_question_answers(facts)
+    for i in range(count):
+        qs=facts[i*3:i*3+3]
         hour,template=SLOTS[i%3]; when=datetime.combine(start+timedelta(days=i//3),datetime.min.time(),TZ).replace(hour=hour)
         data={'day':next_day+i,'q1':{k:qs[0][k] for k in ('question','answer')},'q2':{k:qs[1][k] for k in ('question','answer')},'q3':{**{k:qs[2][k] for k in ('question','answer')},'withhold':True},'caption':CAPTIONS[i%3].format(n=next_day+i),'scheduledAt':when.isoformat(),'meta':{'calendarDay':i//3+1,'slot':i%3+1,'format':'weekly-reviewed','goal':'growth','sources':[q['source_url'] for q in qs]},'visualTemplate':template}
         path=ROOT/'examples'/'auto'/f'post-{next_day+i:03d}.json'
