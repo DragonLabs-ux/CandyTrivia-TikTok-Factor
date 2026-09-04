@@ -1,0 +1,25 @@
+{
+  "day": 6,
+  "q1": {
+    "question": "What is the capital of Russia?",
+    "answer": "Moscow"
+  },
+  "q2": {
+    "question": "What is the chemical symbol for gold?",
+    "answer": "Au"
+  },
+  "q3": {
+    "question": "What is the capital of Michigan?",
+    "answer": "Lansing",
+    "withhold": true
+  },
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun 🍭 #trivia #mobilegames #quiztok #iphone",
+  "scheduledAt": "2026-09-02T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 2,
+    "slot": 3,
+    "format": "app-experiment",
+    "goal": "downloads"
+  },
+  "visualTemplate": "B"
+}

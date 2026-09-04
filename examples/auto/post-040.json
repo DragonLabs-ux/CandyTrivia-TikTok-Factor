@@ -1,0 +1,25 @@
+{
+  "day": 40,
+  "q1": {
+    "question": "What is the capital of Maryland?",
+    "answer": "Annapolis"
+  },
+  "q2": {
+    "question": "What is the deepest known ocean trench?",
+    "answer": "Mariana Trench"
+  },
+  "q3": {
+    "question": "What is 18 plus 5?",
+    "answer": "23",
+    "withhold": true
+  },
+  "caption": "Can you go 3/3? Trivia Candy Fun 🍭 #trivia #quiztok #games #iphone",
+  "scheduledAt": "2026-09-14T09:00:00-07:00",
+  "meta": {
+    "calendarDay": 14,
+    "slot": 1,
+    "format": "fast-easy",
+    "goal": "reach"
+  },
+  "visualTemplate": "A"
+}

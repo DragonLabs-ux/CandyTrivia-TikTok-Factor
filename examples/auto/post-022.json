@@ -1,0 +1,25 @@
+{
+  "day": 22,
+  "q1": {
+    "question": "What gas do humans need to breathe to survive?",
+    "answer": "Oxygen"
+  },
+  "q2": {
+    "question": "What is the capital of New Mexico?",
+    "answer": "Santa Fe"
+  },
+  "q3": {
+    "question": "What is the largest internal organ in the human body?",
+    "answer": "Liver",
+    "withhold": true
+  },
+  "caption": "Can you go 3/3? Trivia Candy Fun 🍭 #trivia #quiztok #games #iphone",
+  "scheduledAt": "2026-09-08T09:00:00-07:00",
+  "meta": {
+    "calendarDay": 8,
+    "slot": 1,
+    "format": "fast-easy",
+    "goal": "reach"
+  },
+  "visualTemplate": "A"
+}

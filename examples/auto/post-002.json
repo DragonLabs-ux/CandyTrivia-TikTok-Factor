@@ -1,0 +1,25 @@
+{
+  "day": 2,
+  "q1": {
+    "question": "What is 30 plus 8?",
+    "answer": "38"
+  },
+  "q2": {
+    "question": "What is 28 plus 6?",
+    "answer": "34"
+  },
+  "q3": {
+    "question": "What is the smallest prime number?",
+    "answer": "2",
+    "withhold": true
+  },
+  "caption": "Most people miss one of these 👀 #trivia #quiztok #challenge #iphone",
+  "scheduledAt": "2026-08-31T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 1,
+    "slot": 2,
+    "format": "hard-challenge",
+    "goal": "comments"
+  },
+  "visualTemplate": "A"
+}

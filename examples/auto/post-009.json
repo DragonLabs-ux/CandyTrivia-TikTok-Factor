@@ -1,0 +1,25 @@
+{
+  "day": 9,
+  "q1": {
+    "question": "What is 7 multiplied by 3?",
+    "answer": "21"
+  },
+  "q2": {
+    "question": "What is H2O commonly called?",
+    "answer": "Water"
+  },
+  "q3": {
+    "question": "What is the main gas in Earth's atmosphere?",
+    "answer": "Nitrogen",
+    "withhold": true
+  },
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun 🍭 #trivia #mobilegames #quiztok #iphone",
+  "scheduledAt": "2026-09-03T21:30:00-07:00",
+  "meta": {
+    "calendarDay": 3,
+    "slot": 3,
+    "format": "app-experiment",
+    "goal": "downloads"
+  },
+  "visualTemplate": "B"
+}

@@ -1,0 +1,25 @@
+{
+  "day": 25,
+  "q1": {
+    "question": "What is 13 plus 9?",
+    "answer": "22"
+  },
+  "q2": {
+    "question": "What does a meteor become if it reaches the ground?",
+    "answer": "Meteorite"
+  },
+  "q3": {
+    "question": "What is the capital of Sweden?",
+    "answer": "Stockholm",
+    "withhold": true
+  },
+  "caption": "Can you go 3/3? Trivia Candy Fun 🍭 #trivia #quiztok #games #iphone",
+  "scheduledAt": "2026-09-09T09:00:00-07:00",
+  "meta": {
+    "calendarDay": 9,
+    "slot": 1,
+    "format": "fast-easy",
+    "goal": "reach"
+  },
+  "visualTemplate": "A"
+}

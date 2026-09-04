@@ -1,0 +1,25 @@
+{
+  "day": 39,
+  "q1": {
+    "question": "What is the largest mammal on Earth?",
+    "answer": "Blue whale"
+  },
+  "q2": {
+    "question": "Which animal is known for changing color?",
+    "answer": "Chameleon"
+  },
+  "q3": {
+    "question": "What is the fastest bird in a dive?",
+    "answer": "Peregrine falcon",
+    "withhold": true
+  },
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun 🍭 #trivia #mobilegames #quiztok #iphone",
+  "scheduledAt": "2026-09-13T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 13,
+    "slot": 3,
+    "format": "app-experiment",
+    "goal": "downloads"
+  },
+  "visualTemplate": "B"
+}

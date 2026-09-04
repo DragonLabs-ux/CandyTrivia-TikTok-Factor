@@ -1,0 +1,25 @@
+{
+  "day": 16,
+  "q1": {
+    "question": "What is the capital of Hawaii?",
+    "answer": "Honolulu"
+  },
+  "q2": {
+    "question": "What is 14 multiplied by 3?",
+    "answer": "42"
+  },
+  "q3": {
+    "question": "What is the capital of Peru?",
+    "answer": "Lima",
+    "withhold": true
+  },
+  "caption": "Can you go 3/3? Trivia Candy Fun 🍭 #trivia #quiztok #games #iphone",
+  "scheduledAt": "2026-09-06T09:00:00-07:00",
+  "meta": {
+    "calendarDay": 6,
+    "slot": 1,
+    "format": "fast-easy",
+    "goal": "reach"
+  },
+  "visualTemplate": "A"
+}

@@ -1,0 +1,25 @@
+{
+  "day": 3,
+  "q1": {
+    "question": "What is the capital of Georgia?",
+    "answer": "Atlanta"
+  },
+  "q2": {
+    "question": "What is 11 plus 7?",
+    "answer": "18"
+  },
+  "q3": {
+    "question": "What is a baby frog called?",
+    "answer": "Tadpole",
+    "withhold": true
+  },
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun 🍭 #trivia #mobilegames #quiztok #iphone",
+  "scheduledAt": "2026-08-31T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 1,
+    "slot": 3,
+    "format": "app-experiment",
+    "goal": "downloads"
+  },
+  "visualTemplate": "B"
+}

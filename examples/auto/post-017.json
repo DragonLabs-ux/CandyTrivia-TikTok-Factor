@@ -1,0 +1,25 @@
+{
+  "day": 17,
+  "q1": {
+    "question": "What is the capital of Texas?",
+    "answer": "Austin"
+  },
+  "q2": {
+    "question": "Which animal carries a hard shell on its back?",
+    "answer": "Turtle"
+  },
+  "q3": {
+    "question": "What is 27 plus 5?",
+    "answer": "32",
+    "withhold": true
+  },
+  "caption": "Most people miss one of these 👀 #trivia #quiztok #challenge #iphone",
+  "scheduledAt": "2026-09-06T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 6,
+    "slot": 2,
+    "format": "hard-challenge",
+    "goal": "comments"
+  },
+  "visualTemplate": "A"
+}

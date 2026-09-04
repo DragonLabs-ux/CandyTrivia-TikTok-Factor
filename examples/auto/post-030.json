@@ -1,0 +1,25 @@
+{
+  "day": 30,
+  "q1": {
+    "question": "What is the capital of Alabama?",
+    "answer": "Montgomery"
+  },
+  "q2": {
+    "question": "What is 28 multiplied by 3?",
+    "answer": "84"
+  },
+  "q3": {
+    "question": "What is 23 plus 10?",
+    "answer": "33",
+    "withhold": true
+  },
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun 🍭 #trivia #mobilegames #quiztok #iphone",
+  "scheduledAt": "2026-09-10T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 10,
+    "slot": 3,
+    "format": "app-experiment",
+    "goal": "downloads"
+  },
+  "visualTemplate": "B"
+}

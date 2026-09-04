@@ -1,0 +1,25 @@
+{
+  "day": 41,
+  "q1": {
+    "question": "Which country gifted the Statue of Liberty to the United States?",
+    "answer": "France"
+  },
+  "q2": {
+    "question": "What process do plants use to make food from light?",
+    "answer": "Photosynthesis"
+  },
+  "q3": {
+    "question": "What instrument commonly has 88 keys?",
+    "answer": "Piano",
+    "withhold": true
+  },
+  "caption": "Most people miss one of these 👀 #trivia #quiztok #challenge #iphone",
+  "scheduledAt": "2026-09-14T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 14,
+    "slot": 2,
+    "format": "hard-challenge",
+    "goal": "comments"
+  },
+  "visualTemplate": "A"
+}

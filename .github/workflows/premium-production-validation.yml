@@ -1,0 +1,85 @@
+name: Candy Premium Production Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      require_campaign:
+        description: Fail unless all 42 existing campaign JSON files are present
+        required: true
+        type: boolean
+        default: false
+  push:
+    branches:
+      - feature/super-premium-candy-graphics
+    paths:
+      - candy_production_validation.py
+      - package.json
+      - package-lock.json
+      - src/**
+      - scripts/**
+      - public/art/**
+      - examples/**
+      - .github/workflows/premium-production-validation.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candy-premium-production-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OPENAI_IMAGES_ENABLED: "0"
+      TTS_ENABLED: "1"
+      TTS_VOICE: en-US-AvaNeural
+      TTS_RATE: +8%
+      TTS_PITCH: +0Hz
+      CANDY_PUBLISHING_DISABLED: "1"
+
+    steps:
+      - name: Checkout approved branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install neural narration dependency
+        run: python -m pip install "edge-tts>=7,<8"
+
+      - name: Install media validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Test production runner
+        run: python -m unittest discover -s tests -v
+
+      - name: Run safe A/B production validation
+        shell: bash
+        run: |
+          args=(--install)
+          if [[ "${{ inputs.require_campaign }}" == "true" ]]; then
+            args+=(--require-campaign)
+          fi
+          python candy_production_validation.py "${args[@]}"
+
+      - name: Upload production validation package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candy-premium-production-${{ github.run_number }}
+          path: out/validation/
+          if-no-files-found: warn
+          retention-days: 14

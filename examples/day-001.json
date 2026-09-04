@@ -1,12 +1,22 @@
 {
   "day": 1,
+  "postId": "001",
+  "visualTemplate": "A",
+  "hook": "Can you go 3 for 3?",
+  "cta": "Drop your final answer",
+  "backgroundVariant": "candy-castle",
+  "mascotVariant": "crown-host",
+  "highContrast": false,
+  "colorBlindMode": true,
   "q1": {
     "question": "How many books are in the King James Bible?",
-    "answer": "66"
+    "answer": "66",
+    "answers": ["39", "66", "73", "81"]
   },
   "q2": {
     "question": "How many hearts does an octopus have?",
-    "answer": "3"
+    "answer": "3",
+    "answers": ["1", "2", "3", "4"]
   },
   "q3": {
     "question": "What was the first thing God created on day one?",

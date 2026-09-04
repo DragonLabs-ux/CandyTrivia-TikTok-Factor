@@ -1,0 +1,25 @@
+{
+  "day": 7,
+  "q1": {
+    "question": "What is 10 multiplied by 6?",
+    "answer": "60"
+  },
+  "q2": {
+    "question": "What is 12 plus 8?",
+    "answer": "20"
+  },
+  "q3": {
+    "question": "How many hours are in a day?",
+    "answer": "24",
+    "withhold": true
+  },
+  "caption": "Can you go 3/3? Trivia Candy Fun 🍭 #trivia #quiztok #games #iphone",
+  "scheduledAt": "2026-09-03T19:30:00-07:00",
+  "meta": {
+    "calendarDay": 3,
+    "slot": 1,
+    "format": "fast-easy",
+    "goal": "reach"
+  },
+  "visualTemplate": "A"
+}

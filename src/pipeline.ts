@@ -5,22 +5,63 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {PutObjectCommand, S3Client} from '@aws-sdk/client-s3';
 import {bundle} from '@remotion/bundler';
-import {renderMedia, selectComposition} from '@remotion/renderer';
+import {renderMedia, renderStill, selectComposition} from '@remotion/renderer';
 import {z} from 'zod';
+import {ensurePremiumAudio} from './audio.js';
+import {normalizeTemplate, type VisualTemplate} from './candy-theme.js';
 import type {CandyTriviaVideoProps} from './video.js';
+import {TIMELINE} from './timeline.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
 const outDir = path.join(root, 'out');
 const privateDir = path.join(root, '.private');
+const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE?.trim() || undefined;
+
+const bundleCandyVideo = () => bundle({
+  entryPoint: path.join(root, 'src', 'video.tsx'),
+  publicDir,
+  webpackOverride: (configuration) => ({
+    ...configuration,
+    resolve: {
+      ...configuration.resolve,
+      extensionAlias: {
+        ...configuration.resolve?.extensionAlias,
+        '.js': ['.ts', '.tsx', '.js'],
+      },
+    },
+  }),
+});
 
 const QuestionSchema = z.object({
   question: z.string().trim().min(1).max(180),
   answer: z.string().trim().min(1).max(80),
+  correctAnswer: z.string().trim().min(1).max(80).optional(),
+  answers: z.array(z.string().trim().min(1).max(80)).length(4).optional(),
+}).superRefine((value, context) => {
+  if (!value.answers) return;
+  const normalized = value.answers.map((answer) => answer.toLocaleLowerCase());
+  if (new Set(normalized).size !== 4) {
+    context.addIssue({code: 'custom', message: 'Multiple-choice answers must be unique.'});
+  }
+  const correct = (value.correctAnswer ?? value.answer).toLocaleLowerCase();
+  if (!normalized.includes(correct)) {
+    context.addIssue({code: 'custom', message: 'Multiple-choice answers must include the correct answer.'});
+  }
 });
 
 export const TriviaDaySchema = z.object({
   day: z.number().int().positive(),
+  postId: z.union([z.string().trim().min(1).max(80), z.number().int().positive()]).optional(),
+  visualTemplate: z.enum(['A', 'B', 'C']).optional(),
+  hook: z.string().trim().min(1).max(90).optional(),
+  cta: z.string().trim().min(1).max(90).optional(),
+  backgroundVariant: z.string().trim().min(1).max(80).optional(),
+  mascotVariant: z.string().trim().min(1).max(80).optional(),
+  highContrast: z.boolean().optional(),
+  colorBlindMode: z.boolean().optional(),
+  progress: z.number().int().min(0).max(3).optional(),
+  score: z.number().int().min(0).max(3).optional(),
   q1: QuestionSchema,
   q2: QuestionSchema,
   q3: QuestionSchema.extend({withhold: z.literal(true)}),
@@ -151,37 +192,125 @@ const prepareAssets = async (day: TriviaDay) => {
   const generatedDir = path.join(publicDir, generatedRelative);
   await fs.mkdir(generatedDir, {recursive: true});
   await ensureAudio();
-  const relativeImages = ['q1.png', 'q2.png', 'q3.png'].map((name) => `${generatedRelative}/${name}`);
-  const absoluteImages = relativeImages.map((relative) => path.join(publicDir, relative));
+  await ensurePremiumAudio(publicDir);
+  const relativeImages: Array<string | undefined> = ['q1.png', 'q2.png', 'q3.png'].map((name) => `${generatedRelative}/${name}`);
+  const absoluteImages = relativeImages.map((relative) => path.join(publicDir, relative as string));
   for (let index = 0; index < absoluteImages.length; index += 1) {
     try {
       await fs.access(absoluteImages[index]);
     } catch {
-      await generateImage(imagePrompts[index], absoluteImages[index]);
+      if (process.env.OPENAI_IMAGES_ENABLED?.trim() === '1') {
+        await generateImage(imagePrompts[index], absoluteImages[index]);
+      } else {
+        relativeImages[index] = undefined;
+      }
     }
   }
-  return relativeImages as [string, string, string];
+  return relativeImages as [string | undefined, string | undefined, string | undefined];
 };
 
-export const renderDay = async (day: TriviaDay): Promise<string> => {
-  await fs.mkdir(outDir, {recursive: true});
-  const [q1Image, q2Image, q3Image] = await prepareAssets(day);
-  const inputProps: CandyTriviaVideoProps = {
-    day: day.day,
-    q1: day.q1.question.toLocaleUpperCase(),
-    a1: day.q1.answer.toLocaleUpperCase(),
-    q2: day.q2.question.toLocaleUpperCase(),
-    a2: day.q2.answer.toLocaleUpperCase(),
-    q3: day.q3.question.toLocaleUpperCase(),
-    q1Image,
-    q2Image,
-    q3Image,
-  };
-  const serveUrl = await bundle({entryPoint: path.join(root, 'src', 'video.tsx'), publicDir});
-  const composition = await selectComposition({serveUrl, id: 'CandyTrivia', inputProps});
-  const output = path.join(outDir, `candy-trivia-day-${dayLabel(day.day)}.mp4`);
-  await renderMedia({composition, serveUrl, codec: 'h264', outputLocation: output, inputProps, logLevel: 'warn'});
+const resolvedAnswer = (question: TriviaDay['q1']) => question.correctAnswer ?? question.answer;
+
+const buildInputProps = (
+  day: TriviaDay,
+  images: [string | undefined, string | undefined, string | undefined],
+  options: {template?: VisualTemplate; withVoiceover?: boolean; highContrast?: boolean; colorBlindMode?: boolean} = {},
+): CandyTriviaVideoProps => ({
+  day: day.day,
+  postId: String(day.postId ?? day.day),
+  visualTemplate: options.template ?? normalizeTemplate(day.visualTemplate),
+  hook: (day.hook ?? 'CAN YOU GO 3 FOR 3?').toLocaleUpperCase(),
+  question: day.q1.question.toLocaleUpperCase(),
+  answers: day.q1.answers?.map((answer) => answer.toLocaleUpperCase()),
+  correctAnswer: resolvedAnswer(day.q1).toLocaleUpperCase(),
+  progress: day.progress ?? 1,
+  score: day.score ?? 0,
+  caption: day.caption,
+  cta: (day.cta ?? 'DROP YOUR FINAL ANSWER').toLocaleUpperCase(),
+  backgroundVariant: day.backgroundVariant ?? `day-${dayLabel(day.day)}`,
+  mascotVariant: day.mascotVariant ?? 'crown-host',
+  highContrast: options.highContrast ?? day.highContrast ?? false,
+  colorBlindMode: options.colorBlindMode ?? day.colorBlindMode ?? true,
+  q1: day.q1.question.toLocaleUpperCase(),
+  a1: resolvedAnswer(day.q1).toLocaleUpperCase(),
+  q1Answers: day.q1.answers?.map((answer) => answer.toLocaleUpperCase()),
+  q2: day.q2.question.toLocaleUpperCase(),
+  a2: resolvedAnswer(day.q2).toLocaleUpperCase(),
+  q2Answers: day.q2.answers?.map((answer) => answer.toLocaleUpperCase()),
+  q3: day.q3.question.toLocaleUpperCase(),
+  q1Image: images[0],
+  q2Image: images[1],
+  q3Image: images[2],
+  withVoiceover: options.withVoiceover ?? false,
+});
+
+const srtTimestamp = (seconds: number) => {
+  const milliseconds = Math.round(seconds * 1000);
+  const hours = Math.floor(milliseconds / 3_600_000);
+  const minutes = Math.floor((milliseconds % 3_600_000) / 60_000);
+  const secs = Math.floor((milliseconds % 60_000) / 1000);
+  const millis = milliseconds % 1000;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')},${String(millis).padStart(3, '0')}`;
+};
+
+const writeSrt = async (day: TriviaDay) => {
+  const cues = [
+    {start: TIMELINE.q1.start, end: TIMELINE.q1.start + TIMELINE.q1.duration, text: day.q1.question},
+    {start: TIMELINE.a1.start, end: TIMELINE.a1.start + TIMELINE.a1.duration, text: `The answer is ${resolvedAnswer(day.q1)}.`},
+    {start: TIMELINE.q2.start, end: TIMELINE.q2.start + TIMELINE.q2.duration, text: day.q2.question},
+    {start: TIMELINE.a2.start, end: TIMELINE.a2.start + TIMELINE.a2.duration, text: `The answer is ${resolvedAnswer(day.q2)}.`},
+    {start: TIMELINE.q3.start, end: TIMELINE.q3.start + TIMELINE.q3.duration, text: day.q3.question},
+    {start: TIMELINE.hold.start, end: TIMELINE.hold.start + TIMELINE.hold.duration, text: 'Lock in your answer.'},
+    {start: TIMELINE.cta.start, end: TIMELINE.cta.start + TIMELINE.cta.duration, text: day.cta ?? 'Drop your final answer.'},
+  ];
+  const content = cues.map((cue, index) => `${index + 1}\n${srtTimestamp(cue.start)} --> ${srtTimestamp(cue.end)}\n${cue.text}\n`).join('\n');
+  const output = path.join(outDir, `candy-trivia-day-${dayLabel(day.day)}.srt`);
+  await fs.writeFile(output, content, 'utf8');
   return output;
+};
+
+export const renderDay = async (
+  day: TriviaDay,
+  options: {withVoiceover?: boolean; template?: VisualTemplate} = {},
+): Promise<string> => {
+  await fs.mkdir(outDir, {recursive: true});
+  const images = await prepareAssets(day);
+  const inputProps = buildInputProps(day, images, options);
+  const serveUrl = await bundleCandyVideo();
+  const composition = await selectComposition({serveUrl, id: 'CandyTrivia', inputProps, browserExecutable});
+  const output = path.join(outDir, `candy-trivia-day-${dayLabel(day.day)}.mp4`);
+  await writeSrt(day);
+  await renderMedia({composition, serveUrl, codec: 'h264', audioCodec: 'aac', pixelFormat: 'yuv420p', outputLocation: output, inputProps, browserExecutable, logLevel: 'warn'});
+  return output;
+};
+
+export const renderReviewDay = async (day: TriviaDay) => {
+  await fs.mkdir(path.join(outDir, 'review'), {recursive: true});
+  const images = await prepareAssets(day);
+  const serveUrl = await bundleCandyVideo();
+  const results: Array<{template: VisualTemplate; video: string; frames: Record<string, string>}> = [];
+  const representativeFrames = {hook: 8, question: 62, reveal: 190, cta: 330} as const;
+
+  for (const template of ['A', 'B', 'C'] as const) {
+    const inputProps = buildInputProps(day, images, {template, withVoiceover: false});
+    const composition = await selectComposition({serveUrl, id: 'CandyTriviaReview', inputProps, browserExecutable});
+    const slug = template.toLocaleLowerCase();
+    const video = path.join(outDir, 'review', `template-${slug}-preview.mp4`);
+    await renderMedia({composition, serveUrl, codec: 'h264', audioCodec: 'aac', pixelFormat: 'yuv420p', outputLocation: video, inputProps, scale: 0.5, crf: 25, browserExecutable, logLevel: 'warn'});
+    const frames: Record<string, string> = {};
+    for (const [name, frame] of Object.entries(representativeFrames)) {
+      const output = path.join(outDir, 'review', `template-${slug}-${name}.png`);
+      await renderStill({composition, serveUrl, output, inputProps, frame, imageFormat: 'png', scale: 0.5, browserExecutable, logLevel: 'warn'});
+      frames[name] = output;
+    }
+    results.push({template, video, frames});
+  }
+
+  const accessProps = buildInputProps(day, images, {template: 'A', highContrast: true, colorBlindMode: true});
+  const accessComposition = await selectComposition({serveUrl, id: 'CandyTriviaReview', inputProps: accessProps, browserExecutable});
+  await renderStill({composition: accessComposition, serveUrl, output: path.join(outDir, 'review', 'accessibility-high-contrast-color-blind.png'), inputProps: accessProps, frame: representativeFrames.reveal, imageFormat: 'png', scale: 0.5, browserExecutable, logLevel: 'warn'});
+  await fs.writeFile(path.join(outDir, 'review', 'manifest.json'), JSON.stringify({publishingEnabled: false, dimensions: '540x960 previews / 1080x1920 production', fps: 30, templates: results}, null, 2), 'utf8');
+  return results;
 };
 
 const uploadVideo = async (day: TriviaDay, file: string): Promise<string> => {
@@ -275,6 +404,15 @@ const recordPublicManifest = async (day: TriviaDay, videoUrl: string, post: Buff
 };
 
 export const publishRenderedDay = async (day: TriviaDay, videoFile?: string) => {
+  if (process.env.CANDY_PUBLISHING_DISABLED === '1') {
+    throw new Error('Publishing is disabled for this process.');
+  }
+  try {
+    await fs.access(path.join(privateDir, 'cloud-publisher-cutover.json'));
+    throw new Error('Local publishing retired: use the Candy Python Cloud Autopilot GitHub workflow.');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   const file = videoFile ?? path.join(outDir, `candy-trivia-day-${dayLabel(day.day)}.mp4`);
   await fs.access(file);
   await recordPrivateAnswer(day);

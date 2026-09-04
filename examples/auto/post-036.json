@@ -1,0 +1,25 @@
+{
+  "day": 36,
+  "q1": {
+    "question": "What is 12 multiplied by 8?",
+    "answer": "96"
+  },
+  "q2": {
+    "question": "What do bees collect from flowers?",
+    "answer": "Nectar"
+  },
+  "q3": {
+    "question": "What is 19 plus 6?",
+    "answer": "25",
+    "withhold": true
+  },
+  "caption": "Think TikTok trivia is easy? Play Trivia Candy Fun 🍭 #trivia #mobilegames #quiztok #iphone",
+  "scheduledAt": "2026-09-12T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 12,
+    "slot": 3,
+    "format": "app-experiment",
+    "goal": "downloads"
+  },
+  "visualTemplate": "B"
+}

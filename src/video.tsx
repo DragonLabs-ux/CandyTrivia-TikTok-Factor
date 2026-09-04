@@ -1,249 +1,207 @@
 import React from 'react';
-import {
-  AbsoluteFill,
-  Composition,
-  Img,
-  Sequence,
-  interpolate,
-  registerRoot,
-  staticFile,
-  useCurrentFrame,
-} from 'remotion';
 import {Audio} from '@remotion/media';
+import {AbsoluteFill, Composition, Sequence, registerRoot, staticFile} from 'remotion';
+import {normalizeTemplate, type VisualTemplate} from './candy-theme.js';
+import {
+  AnswerRevealScene,
+  ChallengeScene,
+  CtaScene,
+  QuestionScene,
+  type SceneCommon,
+} from './candy-visual-system.js';
+import {FPS, REVIEW_FRAMES, TIMELINE, TOTAL_FRAMES} from './timeline.js';
 
 export type CandyTriviaVideoProps = {
   day: number;
+  postId?: string;
+  visualTemplate?: VisualTemplate;
+  hook?: string;
+  question?: string;
+  answers?: string[];
+  correctAnswer?: string;
+  progress?: number;
+  score?: number;
+  caption?: string;
+  cta?: string;
+  backgroundVariant?: string;
+  mascotVariant?: string;
+  highContrast?: boolean;
+  colorBlindMode?: boolean;
   q1: string;
   a1: string;
+  q1Answers?: string[];
   q2: string;
   a2: string;
+  q2Answers?: string[];
   q3: string;
-  q1Image: string;
-  q2Image: string;
-  q3Image: string;
+  q1Image?: string;
+  q2Image?: string;
+  q3Image?: string;
+  withVoiceover?: boolean;
 };
 
-const FPS = 30;
-const totalFrames = 25 * FPS;
+const COUNTDOWN_OFFSET = 3.2;
+const sec = (value: number) => Math.round(value * FPS);
 
-const Background: React.FC<{src: string}> = ({src}) => {
-  const frame = useCurrentFrame();
+const fallbackAnswers = (correct: string) => {
+  const parsed = Number(correct.replaceAll(',', '').trim());
+  if (Number.isFinite(parsed)) {
+    const gap = parsed > 20 ? Math.max(2, Math.round(parsed * 0.08)) : 1;
+    return [parsed - gap, parsed, parsed + gap, parsed + gap * 2].map(String);
+  }
+  return ['YOUR PICK', 'TRUST YOUR GUT', 'LOCK IT IN', 'FINAL ANSWER'];
+};
+
+const answersFor = (answers: string[] | undefined, correct: string) =>
+  answers?.length === 4 ? answers : fallbackAnswers(correct);
+
+const commonFor = (
+  props: CandyTriviaVideoProps,
+  variant: number,
+  image?: string,
+): SceneCommon => ({
+  day: props.day,
+  template: normalizeTemplate(props.visualTemplate),
+  variant,
+  backgroundVariant: props.backgroundVariant ?? `day-${String(props.day).padStart(3, '0')}`,
+  mascotVariant: props.mascotVariant ?? 'crown-host',
+  highContrast: props.highContrast ?? false,
+  colorBlindMode: props.colorBlindMode ?? true,
+  image,
+});
+
+const CueAudio = () => {
+  const questionStarts = [TIMELINE.q1.start, TIMELINE.q2.start, TIMELINE.q3.start];
+  const answerStarts = [TIMELINE.a1.start, TIMELINE.a2.start];
+  const ticks = questionStarts.flatMap((start) => [start + COUNTDOWN_OFFSET, start + COUNTDOWN_OFFSET + 1, start + COUNTDOWN_OFFSET + 2]);
   return (
-    <AbsoluteFill style={{overflow: 'hidden', backgroundColor: '#120022'}}>
-      <Img
-        src={staticFile(src)}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          scale: interpolate(frame, [0, 8 * FPS], [1.02, 1.08], {
-            extrapolateLeft: 'clamp',
-            extrapolateRight: 'clamp',
-          }),
-        }}
-      />
-      <AbsoluteFill
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(24,0,44,.28) 0%, rgba(24,0,44,.04) 28%, rgba(24,0,44,.04) 68%, rgba(24,0,44,.34) 100%)',
-        }}
-      />
+    <>
+      {questionStarts.map((start) => (
+        <Sequence key={`q-${start}`} from={sec(start)} layout="none">
+          <Audio src={staticFile('audio/premium-question.wav')} volume={0.14} />
+        </Sequence>
+      ))}
+      {ticks.map((start) => (
+        <Sequence key={`tick-${start}`} from={sec(start)} layout="none">
+          <Audio src={staticFile('audio/premium-tick.wav')} volume={0.09} />
+        </Sequence>
+      ))}
+      {answerStarts.map((start) => (
+        <Sequence key={`ding-${start}`} from={sec(start)} layout="none">
+          <Audio src={staticFile('audio/premium-ding.wav')} volume={0.2} />
+        </Sequence>
+      ))}
+      <Sequence from={sec(TIMELINE.hold.start)} layout="none">
+        <Audio src={staticFile('audio/premium-suspense.wav')} volume={0.1} />
+      </Sequence>
+      <Sequence from={sec(TIMELINE.cta.start)} layout="none">
+        <Audio src={staticFile('audio/premium-final.wav')} volume={0.17} />
+      </Sequence>
+    </>
+  );
+};
+
+const VoiceAudio: React.FC<{day: number}> = ({day}) => {
+  const base = `generated/day-${String(day).padStart(3, '0')}`;
+  return (
+    <>
+      <Sequence from={sec(TIMELINE.q1.start + 0.18)} layout="none"><Audio src={staticFile(`${base}/voice-q1.mp3`)} volume={1} /></Sequence>
+      <Sequence from={sec(TIMELINE.a1.start + 0.1)} layout="none"><Audio src={staticFile(`${base}/voice-a1.mp3`)} volume={1} /></Sequence>
+      <Sequence from={sec(TIMELINE.q2.start + 0.18)} layout="none"><Audio src={staticFile(`${base}/voice-q2.mp3`)} volume={1} /></Sequence>
+      <Sequence from={sec(TIMELINE.a2.start + 0.1)} layout="none"><Audio src={staticFile(`${base}/voice-a2.mp3`)} volume={1} /></Sequence>
+      <Sequence from={sec(TIMELINE.q3.start + 0.18)} layout="none"><Audio src={staticFile(`${base}/voice-q3.mp3`)} volume={1} /></Sequence>
+      <Sequence from={sec(TIMELINE.cta.start + 0.12)} layout="none"><Audio src={staticFile(`${base}/voice-cta.mp3`)} volume={1} /></Sequence>
+    </>
+  );
+};
+
+export const CandyTriviaVideo: React.FC<CandyTriviaVideoProps> = (props) => {
+  const hook = (props.hook ?? 'CAN YOU GO 3 FOR 3?').toLocaleUpperCase();
+  const cta = (props.cta ?? 'DROP YOUR FINAL ANSWER').toLocaleUpperCase();
+  const initialScore = Math.max(0, Math.min(3, props.score ?? 0));
+  const q1Answers = answersFor(props.q1Answers ?? props.answers, props.a1);
+  const q2Answers = answersFor(props.q2Answers, props.a2);
+
+  return (
+    <AbsoluteFill>
+      <Sequence from={sec(TIMELINE.q1.start)} durationInFrames={sec(TIMELINE.q1.duration)} name="Question 1">
+        <QuestionScene {...commonFor(props, 0, props.q1Image)} durationInFrames={sec(TIMELINE.q1.duration)} hook={hook} question={props.question ?? props.q1} answers={q1Answers} questionNumber={1} progress={1} score={initialScore} showHook countdownStartFrame={sec(COUNTDOWN_OFFSET)} />
+      </Sequence>
+      <Sequence from={sec(TIMELINE.a1.start)} durationInFrames={sec(TIMELINE.a1.duration)} name="Answer 1 reveal">
+        <AnswerRevealScene {...commonFor(props, 0, props.q1Image)} durationInFrames={sec(TIMELINE.a1.duration)} question={props.q1} answers={q1Answers} correctAnswer={props.correctAnswer ?? props.a1} questionNumber={1} progress={1} score={Math.min(3, initialScore + 1)} />
+      </Sequence>
+      <Sequence from={sec(TIMELINE.q2.start)} durationInFrames={sec(TIMELINE.q2.duration)} name="Question 2">
+        <QuestionScene {...commonFor(props, 1, props.q2Image)} durationInFrames={sec(TIMELINE.q2.duration)} hook={hook} question={props.q2} answers={q2Answers} questionNumber={2} progress={2} score={Math.min(3, initialScore + 1)} countdownStartFrame={sec(COUNTDOWN_OFFSET)} />
+      </Sequence>
+      <Sequence from={sec(TIMELINE.a2.start)} durationInFrames={sec(TIMELINE.a2.duration)} name="Answer 2 reveal">
+        <AnswerRevealScene {...commonFor(props, 1, props.q2Image)} durationInFrames={sec(TIMELINE.a2.duration)} question={props.q2} answers={q2Answers} correctAnswer={props.a2} questionNumber={2} progress={2} score={Math.min(3, initialScore + 2)} />
+      </Sequence>
+      <Sequence from={sec(TIMELINE.q3.start)} durationInFrames={sec(TIMELINE.q3.duration)} name="Final unanswered question">
+        <ChallengeScene {...commonFor(props, 2, props.q3Image)} durationInFrames={sec(TIMELINE.q3.duration)} question={props.q3} hook="ONE MORE FOR THE CROWN" questionNumber={3} progress={3} score={Math.min(3, initialScore + 2)} />
+      </Sequence>
+      <Sequence from={sec(TIMELINE.hold.start)} durationInFrames={sec(TIMELINE.hold.duration)} name="Lock in answer">
+        <ChallengeScene {...commonFor(props, 2, props.q3Image)} durationInFrames={sec(TIMELINE.hold.duration)} question={props.q3} hook="ONE MORE FOR THE CROWN" questionNumber={3} progress={3} score={Math.min(3, initialScore + 2)} lockIn />
+      </Sequence>
+      <Sequence from={sec(TIMELINE.cta.start)} durationInFrames={sec(TIMELINE.cta.duration)} name="Final CTA">
+        <CtaScene {...commonFor(props, 0)} durationInFrames={sec(TIMELINE.cta.duration)} cta={cta} score={Math.min(3, initialScore + 2)} />
+      </Sequence>
+      <CueAudio />
+      {props.withVoiceover ? <VoiceAudio day={props.day} /> : null}
     </AbsoluteFill>
   );
 };
 
-const MainText: React.FC<{children: React.ReactNode; answer?: boolean}> = ({children, answer = false}) => (
-  <div
-    style={{
-      width: 900,
-      maxWidth: '88%',
-      padding: answer ? '42px 56px' : '46px 54px',
-      borderRadius: 44,
-      textAlign: 'center',
-      fontFamily: 'Arial Rounded MT Bold, Arial Black, system-ui, sans-serif',
-      fontSize: answer ? 116 : 78,
-      lineHeight: 1.06,
-      fontWeight: 900,
-      color: '#ffffff',
-      textShadow: '0 5px 18px rgba(0,0,0,.55)',
-      background: answer ? 'rgba(91, 20, 154, .82)' : 'rgba(20, 4, 36, .66)',
-      border: answer ? '7px solid rgba(255,220,68,.95)' : '5px solid rgba(255,255,255,.34)',
-      boxShadow: '0 22px 60px rgba(0,0,0,.28)',
-    }}
-  >
-    {children}
-  </div>
-);
-
-const Countdown: React.FC<{startFrame: number}> = ({startFrame}) => {
-  const frame = useCurrentFrame();
-  const local = frame - startFrame;
-  const value = local < FPS ? '3' : local < 2 * FPS ? '2' : '1';
+export const CandyTriviaReview: React.FC<CandyTriviaVideoProps> = (props) => {
+  const hook = (props.hook ?? 'CAN YOU GO 3 FOR 3?').toLocaleUpperCase();
+  const cta = (props.cta ?? 'DROP YOUR FINAL ANSWER').toLocaleUpperCase();
+  const q1Answers = answersFor(props.q1Answers ?? props.answers, props.a1);
+  const score = Math.max(0, Math.min(3, props.score ?? 0));
   return (
-    <div
-      style={{
-        position: 'absolute',
-        bottom: 185,
-        width: 176,
-        height: 176,
-        borderRadius: 88,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'Arial Black, system-ui, sans-serif',
-        fontSize: 112,
-        fontWeight: 900,
-        color: '#4b106e',
-        background: 'rgba(255,255,255,.94)',
-        border: '8px solid rgba(255,213,45,.98)',
-        boxShadow: '0 18px 45px rgba(0,0,0,.32)',
-      }}
-    >
-      {value}
-    </div>
+    <AbsoluteFill>
+      <Sequence from={0} durationInFrames={150} name="Hook and question">
+        <QuestionScene {...commonFor(props, 0, props.q1Image)} durationInFrames={150} hook={hook} question={props.question ?? props.q1} answers={q1Answers} questionNumber={1} progress={1} score={score} showHook countdownStartFrame={60} />
+      </Sequence>
+      <Sequence from={150} durationInFrames={78} name="Answer reveal">
+        <AnswerRevealScene {...commonFor(props, 0, props.q1Image)} durationInFrames={78} question={props.q1} answers={q1Answers} correctAnswer={props.correctAnswer ?? props.a1} questionNumber={1} progress={1} score={Math.min(3, score + 1)} />
+      </Sequence>
+      <Sequence from={228} durationInFrames={78} name="Final challenge">
+        <ChallengeScene {...commonFor(props, 2, props.q3Image)} durationInFrames={78} question={props.q3} hook="ONE MORE FOR THE CROWN" questionNumber={3} progress={3} score={Math.min(3, score + 2)} lockIn />
+      </Sequence>
+      <Sequence from={306} durationInFrames={96} name="CTA">
+        <CtaScene {...commonFor(props, 0)} durationInFrames={96} cta={cta} score={Math.min(3, score + 2)} />
+      </Sequence>
+      <Sequence from={0} layout="none"><Audio src={staticFile('audio/premium-question.wav')} volume={0.14} /></Sequence>
+      <Sequence from={150} layout="none"><Audio src={staticFile('audio/premium-ding.wav')} volume={0.2} /></Sequence>
+      <Sequence from={306} layout="none"><Audio src={staticFile('audio/premium-final.wav')} volume={0.17} /></Sequence>
+    </AbsoluteFill>
   );
 };
-
-const QuestionScene: React.FC<{
-  image: string;
-  question: string;
-  countdownStart?: number;
-  lockIn?: boolean;
-}> = ({image, question, countdownStart, lockIn = false}) => (
-  <AbsoluteFill>
-    <Background src={image} />
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
-      <MainText>{question}</MainText>
-      {countdownStart !== undefined ? <Countdown startFrame={countdownStart} /> : null}
-      {lockIn ? (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 205,
-            padding: '22px 42px',
-            borderRadius: 36,
-            fontFamily: 'Arial Black, system-ui, sans-serif',
-            fontSize: 54,
-            fontWeight: 900,
-            color: '#ffffff',
-            background: 'rgba(91,20,154,.82)',
-            border: '4px solid rgba(255,220,68,.92)',
-          }}
-        >
-          LOCK IN YOUR ANSWER
-        </div>
-      ) : null}
-    </AbsoluteFill>
-  </AbsoluteFill>
-);
-
-const AnswerScene: React.FC<{image: string; answer: string}> = ({image, answer}) => (
-  <AbsoluteFill>
-    <Background src={image} />
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
-      <MainText answer>{answer}</MainText>
-    </AbsoluteFill>
-  </AbsoluteFill>
-);
-
-const CueAudio = () => (
-  <>
-    {[0, 6, 14].map((second) => (
-      <Sequence key={`q-${second}`} from={second * FPS} durationInFrames={Math.round(0.45 * FPS)} layout="none">
-        <Audio src={staticFile('audio/question.wav')} />
-      </Sequence>
-    ))}
-    {[1, 2, 3, 7, 8, 9, 15, 16, 17].map((second) => (
-      <Sequence key={`tick-${second}`} from={second * FPS} durationInFrames={Math.round(0.25 * FPS)} layout="none">
-        <Audio src={staticFile('audio/tick.wav')} />
-      </Sequence>
-    ))}
-    {[4, 10].map((second) => (
-      <Sequence key={`ding-${second}`} from={second * FPS} durationInFrames={Math.round(0.7 * FPS)} layout="none">
-        <Audio src={staticFile('audio/ding.wav')} />
-      </Sequence>
-    ))}
-    <Sequence from={18 * FPS} durationInFrames={4 * FPS} layout="none">
-      <Audio src={staticFile('audio/suspense.wav')} />
-    </Sequence>
-    <Sequence from={22 * FPS} durationInFrames={Math.round(0.6 * FPS)} layout="none">
-      <Audio src={staticFile('audio/final.wav')} />
-    </Sequence>
-  </>
-);
-
-export const CandyTriviaVideo: React.FC<CandyTriviaVideoProps> = (props) => (
-  <AbsoluteFill>
-    <Sequence from={0} durationInFrames={4 * FPS}>
-      <QuestionScene image={props.q1Image} question={props.q1} countdownStart={1 * FPS} />
-    </Sequence>
-    <Sequence from={4 * FPS} durationInFrames={2 * FPS}>
-      <AnswerScene image={props.q1Image} answer={props.a1} />
-    </Sequence>
-
-    <Sequence from={6 * FPS} durationInFrames={4 * FPS}>
-      <QuestionScene image={props.q2Image} question={props.q2} countdownStart={1 * FPS} />
-    </Sequence>
-    <Sequence from={10 * FPS} durationInFrames={4 * FPS}>
-      <AnswerScene image={props.q2Image} answer={props.a2} />
-    </Sequence>
-
-    <Sequence from={14 * FPS} durationInFrames={4 * FPS}>
-      <QuestionScene image={props.q3Image} question={props.q3} countdownStart={1 * FPS} />
-    </Sequence>
-    <Sequence from={18 * FPS} durationInFrames={4 * FPS}>
-      <QuestionScene image={props.q3Image} question={props.q3} lockIn />
-    </Sequence>
-
-    <Sequence from={22 * FPS} durationInFrames={3 * FPS}>
-      <AbsoluteFill
-        style={{
-          backgroundColor: '#000000',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 70,
-        }}
-      >
-        <div
-          style={{
-            fontFamily: 'Arial Black, system-ui, sans-serif',
-            fontSize: 96,
-            lineHeight: 1.06,
-            fontWeight: 900,
-            textAlign: 'center',
-            color: '#ffffff',
-          }}
-        >
-          ANSWER IN THE COMMENTS
-        </div>
-      </AbsoluteFill>
-    </Sequence>
-    <CueAudio />
-  </AbsoluteFill>
-);
 
 const defaultProps: CandyTriviaVideoProps = {
   day: 1,
-  q1: 'QUESTION ONE',
-  a1: 'ANSWER',
-  q2: 'QUESTION TWO',
-  a2: 'ANSWER',
-  q3: 'QUESTION THREE',
-  q1Image: 'generated/placeholder.png',
-  q2Image: 'generated/placeholder.png',
-  q3Image: 'generated/placeholder.png',
+  postId: '001',
+  visualTemplate: 'A',
+  hook: 'CAN YOU GO 3 FOR 3?',
+  q1: 'WHICH CANDY WAS FIRST SOLD IN 1941?',
+  a1: "M&M'S",
+  q1Answers: ['SKITTLES', "M&M'S", "REESE'S", 'TWIX'],
+  q2: 'HOW MANY HEARTS DOES AN OCTOPUS HAVE?',
+  a2: '3',
+  q2Answers: ['1', '2', '3', '4'],
+  q3: 'WHAT WAS THE FIRST THING GOD CREATED ON DAY ONE?',
+  cta: 'DROP YOUR FINAL ANSWER',
+  backgroundVariant: 'candy-castle',
+  mascotVariant: 'crown-host',
+  highContrast: false,
+  colorBlindMode: true,
+  withVoiceover: false,
 };
 
 const RemotionRoot = () => (
-  <Composition
-    id="CandyTrivia"
-    component={CandyTriviaVideo}
-    durationInFrames={totalFrames}
-    fps={FPS}
-    width={1080}
-    height={1920}
-    defaultProps={defaultProps}
-  />
+  <>
+    <Composition id="CandyTrivia" component={CandyTriviaVideo} durationInFrames={TOTAL_FRAMES} fps={FPS} width={1080} height={1920} defaultProps={defaultProps} />
+    <Composition id="CandyTriviaReview" component={CandyTriviaReview} durationInFrames={REVIEW_FRAMES} fps={FPS} width={1080} height={1920} defaultProps={defaultProps} />
+  </>
 );
 
 registerRoot(RemotionRoot);
