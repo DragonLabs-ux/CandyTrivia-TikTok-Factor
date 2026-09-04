@@ -4,8 +4,9 @@
 The script is intentionally local because the Buffer/R2 credentials and the
 append-only duplicate-protection history live only in the operator checkout.
 It preserves untracked files that would block the branch switch, applies the
-approved A/A/B template rotation, moves posts 007-009 into spaced future slots
-today, performs a Buffer-aware dry run, and publishes only with --apply.
+approved A/A/B template rotation, moves posts 007-009 into one-hour recovery
+slots beginning at or after 7 PM today, performs a Buffer-aware dry run, and
+publishes only with --apply. Later campaign dates retain their normal schedule.
 """
 
 from __future__ import annotations
@@ -25,8 +26,9 @@ BRANCH = "feature/super-premium-candy-graphics"
 REMOTE = "origin"
 PHOENIX = ZoneInfo("America/Phoenix")
 TODAY_POSTS = (7, 8, 9)
-MINIMUM_LEAD = timedelta(minutes=75)
-SPACING = timedelta(hours=2)
+MINIMUM_LEAD = timedelta(minutes=45)
+SPACING = timedelta(hours=1)
+RECOVERY_START_HOUR = 19
 LATEST_SLOT_HOUR = 23
 BACKUP_ROOT = Path(".private") / "premium-migration-backups"
 
@@ -165,7 +167,13 @@ def round_up_quarter(value: datetime) -> datetime:
 
 
 def plan_slots(now: datetime) -> list[datetime]:
-    first = round_up_quarter(now + MINIMUM_LEAD)
+    requested_start = now.replace(
+        hour=RECOVERY_START_HOUR,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+    first = max(requested_start, round_up_quarter(now + MINIMUM_LEAD))
     slots = [first + index * SPACING for index in range(len(TODAY_POSTS))]
     if any(slot.date() != now.date() for slot in slots):
         raise SafeStop(
@@ -258,7 +266,8 @@ def main() -> int:
     for day, slot in zip(TODAY_POSTS, slots, strict=True):
         template = "B" if day % 3 == 0 else "A"
         print(f"  Post {day:03d}: {slot:%Y-%m-%d %I:%M %p} | Template {template}")
-    print("  Spacing: 2 hours | minimum initial lead: 75 minutes")
+    print("  Recovery spacing: 1 hour | minimum initial lead: 45 minutes")
+    print("  Posts 010-042 retain their normal 9 AM / 3 PM / 7 PM schedule.")
 
     backup = switch_to_premium(root)
     changed = apply_rotation_and_slots(root, slots)
