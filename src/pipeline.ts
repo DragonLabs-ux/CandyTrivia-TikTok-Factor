@@ -14,6 +14,8 @@ import {THUMBNAIL_FRAME, THUMBNAIL_OFFSET_MS, TIMELINE} from './timeline.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
+const TIKTOK_COMMERCIAL_MODE = 'own_brand' as const;
+const TIKTOK_SCHEDULING_TYPE = 'notification' as const;
 const outDir = path.join(root, 'out');
 const privateDir = path.join(root, '.private');
 const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE?.trim() || undefined;
@@ -446,10 +448,13 @@ const bufferGraphQL = async <T>(query: string, variables: Record<string, unknown
 };
 
 const queueBufferPost = async (day: TriviaDay, videoUrl: string): Promise<BufferPostResult> => {
+  if (TIKTOK_COMMERCIAL_MODE === 'own_brand' && TIKTOK_SCHEDULING_TYPE !== 'notification') {
+    throw new Error('OWN_BRAND_DISCLOSURE_REQUIRES_NOTIFICATION_PUBLISHING');
+  }
   const input: Record<string, unknown> = {
     text: day.caption,
     channelId: requiredEnv('BUFFER_TIKTOK_CHANNEL_ID'),
-    schedulingType: 'automatic',
+    schedulingType: TIKTOK_SCHEDULING_TYPE,
     mode: day.scheduledAt ? 'customScheduled' : 'addToQueue',
     aiAssisted: true,
     assets: [{video: {url: videoUrl, metadata: {thumbnailOffset: THUMBNAIL_OFFSET_MS}}}],
