@@ -1,0 +1,53 @@
+name: Candy visual review
+
+on:
+  pull_request:
+    paths:
+      - 'public/visuals/**'
+      - 'src/candy-visual-system.tsx'
+      - 'src/video.tsx'
+      - 'src/timeline.ts'
+      - 'src/pipeline.ts'
+      - 'scripts/validate-visual-pack.py'
+      - '.github/workflows/candy-visual-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: python -m pip install Pillow==11.3.0
+      - name: Render covers 011-024
+        run: npm run render-covers -- $(printf 'examples/auto/post-%03d.json ' $(seq 11 24))
+      - name: Render non-publishing production sample
+        run: npm run render -- examples/auto/post-013.json
+      - name: Build full-size and phone-size contact sheets
+        run: python scripts/build-cover-contact-sheets.py
+      - name: Validate immutable pack and review proofs
+        run: python scripts/validate-visual-pack.py
+      - name: Upload visual review package
+        uses: actions/upload-artifact@v4
+        with:
+          name: candy-visual-review-011-024
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            out/review/covers/*.png
+            out/review/covers-contact-sheet-*.png
+            out/review/visual-quality-report.json
+            out/candy-trivia-day-013.mp4
+            out/candy-trivia-day-013-cover.png
+            out/candy-trivia-day-013.srt

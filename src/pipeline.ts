@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import {randomUUID} from 'node:crypto';
+import {createHash, randomUUID} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -10,7 +10,7 @@ import {z} from 'zod';
 import {ensurePremiumAudio} from './audio.js';
 import {normalizeTemplate, type VisualTemplate} from './candy-theme.js';
 import type {CandyTriviaVideoProps} from './video.js';
-import {TIMELINE} from './timeline.js';
+import {THUMBNAIL_FRAME, THUMBNAIL_OFFSET_MS, TIMELINE} from './timeline.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
@@ -50,6 +50,18 @@ const QuestionSchema = z.object({
   }
 });
 
+const CoverItemSchema = z.object({
+  label: z.string().trim().min(1).max(24),
+  subjectImage: z.string().trim().min(1).max(180),
+});
+
+const CoverSchema = z.object({
+  heading: z.string().trim().min(2).max(48),
+  backgroundImage: z.string().trim().min(1).max(180),
+  usesEmojiFallback: z.literal(false),
+  items: z.array(CoverItemSchema).length(3),
+});
+
 export const TriviaDaySchema = z.object({
   day: z.number().int().positive(),
   postId: z.union([z.string().trim().min(1).max(80), z.number().int().positive()]).optional(),
@@ -67,6 +79,7 @@ export const TriviaDaySchema = z.object({
   q3: QuestionSchema.extend({withhold: z.literal(true)}),
   caption: z.string().trim().min(1).max(119),
   scheduledAt: z.string().datetime({offset: true}).optional(),
+  cover: CoverSchema.optional(),
 });
 
 export type TriviaDay = z.infer<typeof TriviaDaySchema>;
@@ -85,6 +98,60 @@ const requiredEnv = (name: string): string => {
 
 const dayLabel = (day: number) => String(day).padStart(3, '0');
 
+const visualRoot = path.join(publicDir, 'visuals', 'candy-v1');
+const visualManifestFile = path.join(visualRoot, 'manifest.json');
+const coverCatalogFile = path.join(visualRoot, 'covers.json');
+
+const sha256 = (value: Buffer) => createHash('sha256').update(value).digest('hex');
+
+const loadCover = async (day: number) => {
+  try {
+    const catalog = JSON.parse(await fs.readFile(coverCatalogFile, 'utf8')) as {posts?: Record<string, unknown>};
+    const raw = catalog.posts?.[dayLabel(day)];
+    return raw ? CoverSchema.parse(raw) : undefined;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  }
+};
+
+const safeVisualPath = (relative: string) => {
+  if (!relative.startsWith('visuals/candy-v1/') || relative.includes('..') || path.isAbsolute(relative)) {
+    throw new Error(`Cover asset path is outside the approved visual family: ${relative}`);
+  }
+  return path.join(publicDir, ...relative.split('/'));
+};
+
+const readVisualManifest = async () => JSON.parse(await fs.readFile(visualManifestFile, 'utf8')) as {
+  visualFamilyId?: string;
+  reviewStatus?: string;
+  assets?: Record<string, {sha256?: string; reviewStatus?: string}>;
+};
+
+export const validateCoverAssets = async (day: TriviaDay, requireApproval = false) => {
+  if (!day.cover) throw new Error(`THUMBNAIL_MISSING: post ${dayLabel(day.day)} has no dedicated cover configuration.`);
+  if (day.cover.usesEmojiFallback) throw new Error('EMOJI_COVER_FALLBACK_FORBIDDEN');
+  const manifest = await readVisualManifest();
+  if (manifest.visualFamilyId !== 'candy-v1') throw new Error('VISUAL_FAMILY_MANIFEST_MISMATCH');
+  if (requireApproval && manifest.reviewStatus !== 'approved') throw new Error('VISUAL_FAMILY_NOT_APPROVED');
+  const referenced = [day.cover.backgroundImage, ...day.cover.items.map((item) => item.subjectImage)];
+  for (const relative of referenced) {
+    const record = manifest.assets?.[relative];
+    if (!record?.sha256) throw new Error(`UNMANIFESTED_COVER_ASSET: ${relative}`);
+    if (requireApproval && record.reviewStatus !== 'approved') throw new Error(`COVER_ASSET_NOT_APPROVED: ${relative}`);
+    const bytes = await fs.readFile(safeVisualPath(relative));
+    if (sha256(bytes) !== record.sha256) throw new Error(`COVER_ASSET_HASH_MISMATCH: ${relative}`);
+  }
+};
+
+const coverThumbnailFile = (day: number) => path.join(outDir, `candy-trivia-day-${dayLabel(day)}-cover.png`);
+
+const validateRenderedThumbnail = async (day: TriviaDay) => {
+  const bytes = await fs.readFile(coverThumbnailFile(day.day));
+  if (bytes.length < 24 || bytes.toString('ascii', 1, 4) !== 'PNG') throw new Error('THUMBNAIL_MISSING_OR_INVALID');
+  if (bytes.readUInt32BE(16) !== 1080 || bytes.readUInt32BE(20) !== 1920) throw new Error('THUMBNAIL_DIMENSIONS_INVALID');
+};
+
 const validatePublicContent = (day: TriviaDay) => {
   const hashtags = day.caption.match(/#[\p{L}\p{N}_]+/gu) ?? [];
   if (hashtags.length !== 4) {
@@ -98,7 +165,8 @@ const validatePublicContent = (day: TriviaDay) => {
 
 export const loadDay = async (file: string): Promise<TriviaDay> => {
   const raw = await fs.readFile(path.resolve(file), 'utf8');
-  const day = TriviaDaySchema.parse(JSON.parse(raw));
+  const initial = TriviaDaySchema.parse(JSON.parse(raw));
+  const day = TriviaDaySchema.parse({...initial, cover: initial.cover ?? await loadCover(initial.day)});
   validatePublicContent(day);
   return day;
 };
@@ -241,6 +309,10 @@ const buildInputProps = (
   q1Image: images[0],
   q2Image: images[1],
   q3Image: images[2],
+  coverHeading: day.cover?.heading,
+  coverBackgroundImage: day.cover?.backgroundImage,
+  coverItems: day.cover?.items,
+  coverUsesEmojiFallback: day.cover?.usesEmojiFallback ?? true,
   withVoiceover: options.withVoiceover ?? false,
 });
 
@@ -274,29 +346,33 @@ export const renderDay = async (
   options: {withVoiceover?: boolean; template?: VisualTemplate} = {},
 ): Promise<string> => {
   await fs.mkdir(outDir, {recursive: true});
+  await validateCoverAssets(day, false);
   const images = await prepareAssets(day);
   const inputProps = buildInputProps(day, images, options);
   const serveUrl = await bundleCandyVideo();
   const composition = await selectComposition({serveUrl, id: 'CandyTrivia', inputProps, browserExecutable});
   const output = path.join(outDir, `candy-trivia-day-${dayLabel(day.day)}.mp4`);
   await writeSrt(day);
-  await renderMedia({composition, serveUrl, codec: 'h264', audioCodec: 'aac', pixelFormat: 'yuv420p', outputLocation: output, inputProps, browserExecutable, logLevel: 'warn'});
+  await renderMedia({composition, serveUrl, codec: 'h264', audioCodec: 'aac', pixelFormat: 'yuv420p', outputLocation: output, inputProps, browserExecutable, concurrency: 4, logLevel: 'warn'});
+  await renderStill({composition, serveUrl, output: coverThumbnailFile(day.day), inputProps, frame: THUMBNAIL_FRAME, imageFormat: 'png', browserExecutable, logLevel: 'warn'});
+  await validateRenderedThumbnail(day);
   return output;
 };
 
 export const renderReviewDay = async (day: TriviaDay) => {
   await fs.mkdir(path.join(outDir, 'review'), {recursive: true});
+  await validateCoverAssets(day, false);
   const images = await prepareAssets(day);
   const serveUrl = await bundleCandyVideo();
   const results: Array<{template: VisualTemplate; video: string; frames: Record<string, string>}> = [];
-  const representativeFrames = {hook: 8, question: 62, reveal: 190, cta: 330} as const;
+  const representativeFrames = {cover: THUMBNAIL_FRAME, hook: 68, question: 122, reveal: 250, cta: 390} as const;
 
   for (const template of ['A', 'B', 'C'] as const) {
     const inputProps = buildInputProps(day, images, {template, withVoiceover: false});
     const composition = await selectComposition({serveUrl, id: 'CandyTriviaReview', inputProps, browserExecutable});
     const slug = template.toLocaleLowerCase();
     const video = path.join(outDir, 'review', `template-${slug}-preview.mp4`);
-    await renderMedia({composition, serveUrl, codec: 'h264', audioCodec: 'aac', pixelFormat: 'yuv420p', outputLocation: video, inputProps, scale: 0.5, crf: 25, browserExecutable, logLevel: 'warn'});
+    await renderMedia({composition, serveUrl, codec: 'h264', audioCodec: 'aac', pixelFormat: 'yuv420p', outputLocation: video, inputProps, scale: 0.5, crf: 25, browserExecutable, concurrency: 4, logLevel: 'warn'});
     const frames: Record<string, string> = {};
     for (const [name, frame] of Object.entries(representativeFrames)) {
       const output = path.join(outDir, 'review', `template-${slug}-${name}.png`);
@@ -311,6 +387,22 @@ export const renderReviewDay = async (day: TriviaDay) => {
   await renderStill({composition: accessComposition, serveUrl, output: path.join(outDir, 'review', 'accessibility-high-contrast-color-blind.png'), inputProps: accessProps, frame: representativeFrames.reveal, imageFormat: 'png', scale: 0.5, browserExecutable, logLevel: 'warn'});
   await fs.writeFile(path.join(outDir, 'review', 'manifest.json'), JSON.stringify({publishingEnabled: false, dimensions: '540x960 previews / 1080x1920 production', fps: 30, templates: results}, null, 2), 'utf8');
   return results;
+};
+
+export const renderCoverProofs = async (days: TriviaDay[]) => {
+  const proofDir = path.join(outDir, 'review', 'covers');
+  await fs.mkdir(proofDir, {recursive: true});
+  const serveUrl = await bundleCandyVideo();
+  const outputs: string[] = [];
+  for (const day of days) {
+    await validateCoverAssets(day, false);
+    const inputProps = buildInputProps(day, [undefined, undefined, undefined], {withVoiceover: false});
+    const composition = await selectComposition({serveUrl, id: 'CandyTrivia', inputProps, browserExecutable});
+    const output = path.join(proofDir, `post-${dayLabel(day.day)}-cover.png`);
+    await renderStill({composition, serveUrl, output, inputProps, frame: THUMBNAIL_FRAME, imageFormat: 'png', browserExecutable, logLevel: 'warn'});
+    outputs.push(output);
+  }
+  return outputs;
 };
 
 const uploadVideo = async (day: TriviaDay, file: string): Promise<string> => {
@@ -360,7 +452,7 @@ const queueBufferPost = async (day: TriviaDay, videoUrl: string): Promise<Buffer
     schedulingType: 'automatic',
     mode: day.scheduledAt ? 'customScheduled' : 'addToQueue',
     aiAssisted: true,
-    assets: [{video: {url: videoUrl, metadata: {thumbnailOffset: Number(process.env.TIKTOK_THUMBNAIL_OFFSET_MS || '2000')}}}],
+    assets: [{video: {url: videoUrl, metadata: {thumbnailOffset: THUMBNAIL_OFFSET_MS}}}],
   };
   if (day.scheduledAt) input.dueAt = day.scheduledAt;
   const result = await bufferGraphQL<{
@@ -415,6 +507,8 @@ export const publishRenderedDay = async (day: TriviaDay, videoFile?: string) => 
   }
   const file = videoFile ?? path.join(outDir, `candy-trivia-day-${dayLabel(day.day)}.mp4`);
   await fs.access(file);
+  await validateCoverAssets(day, true);
+  await validateRenderedThumbnail(day);
   await recordPrivateAnswer(day);
   const videoUrl = await uploadVideo(day, file);
   const post = await queueBufferPost(day, videoUrl);

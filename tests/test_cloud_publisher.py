@@ -4,6 +4,7 @@ import io
 import json
 import os
 import sys
+import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -316,6 +317,55 @@ class PublisherTests(unittest.TestCase):
         s['posts'][self.post['id']]['buffer_ids'] = ['same-id']
         with self.assertRaisesRegex(c.CloudError, 'DUPLICATE_BUFFER_ID_STATE'):
             c.validate_state(s)
+
+    def test_cover_gate_rejects_pending_or_emoji_visuals(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            asset = root / 'public' / 'visuals' / 'candy-v1' / 'subject.png'
+            asset.parent.mkdir(parents=True)
+            asset.write_bytes(b'approved-image-bytes')
+            sha = c.hashlib.sha256(asset.read_bytes()).hexdigest()
+            manifest = asset.parent / 'manifest.json'
+            covers = asset.parent / 'covers.json'
+            payload = {'visualFamilyId': 'candy-v1', 'reviewStatus': 'pending',
+                'assets': {'visuals/candy-v1/subject.png': {'sha256': sha, 'reviewStatus': 'pending'}}}
+            manifest.write_text(json.dumps(payload), encoding='utf-8')
+            cover = {'visualFamilyId': 'candy-v1', 'posts': {'100': {
+                'heading': 'TEST COVER', 'backgroundImage': 'visuals/candy-v1/subject.png',
+                'usesEmojiFallback': False, 'items': [
+                    {'label': 'ONE', 'subjectImage': 'visuals/candy-v1/subject.png'},
+                    {'label': 'TWO', 'subjectImage': 'visuals/candy-v1/subject.png'},
+                    {'label': 'THREE', 'subjectImage': 'visuals/candy-v1/subject.png'}]}}}
+            covers.write_text(json.dumps(cover), encoding='utf-8')
+            with patch.object(c, 'ROOT', root), patch.object(c, 'VISUAL_MANIFEST', manifest), \
+                 patch.object(c, 'COVER_CATALOG', covers):
+                c.validate_cover(self.post, require_approval=False)
+                with self.assertRaisesRegex(c.CloudError, 'NOT_APPROVED'):
+                    c.validate_cover(self.post, require_approval=True)
+                cover['posts']['100']['usesEmojiFallback'] = True
+                covers.write_text(json.dumps(cover), encoding='utf-8')
+                with self.assertRaisesRegex(c.CloudError, 'EMOJI'):
+                    c.validate_cover(self.post, require_approval=False)
+
+    def test_thumbnail_gate_requires_exact_png_dimensions(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            thumbnail = root / 'out' / 'candy-trivia-day-100-cover.png'
+            thumbnail.parent.mkdir(parents=True)
+            header = bytearray(24)
+            header[:8] = b'\x89PNG\r\n\x1a\n'
+            header[16:20] = (1080).to_bytes(4, 'big')
+            header[20:24] = (1920).to_bytes(4, 'big')
+            thumbnail.write_bytes(header)
+            with patch.object(c, 'ROOT', root):
+                self.assertEqual(thumbnail, c.validate_thumbnail(self.post))
+                thumbnail.unlink()
+                with self.assertRaisesRegex(c.CloudError, 'THUMBNAIL_MISSING'):
+                    c.validate_thumbnail(self.post)
+
+    def test_thumbnail_offset_is_middle_of_two_second_cover(self):
+        self.assertEqual(2, c.COVER_DURATION_SECONDS)
+        self.assertEqual(1000, c.THUMBNAIL_OFFSET_MS)
 
 
 if __name__ == '__main__':
