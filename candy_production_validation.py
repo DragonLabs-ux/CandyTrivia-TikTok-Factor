@@ -28,9 +28,9 @@ SAMPLE_DEFAULT = ROOT / "examples" / "day-001.json"
 CAMPAIGN_GLOB_DEFAULT = str(ROOT / "examples" / "auto" / "post-*.json")
 APPROVED_TEMPLATES = ("A", "B")
 ROTATION = ("A", "A", "B")
-QA_TIMES = (1.0, 7.0, 13.5, 16.0, 20.5, 25.0, 30.6)
+QA_TIMES = (1.0, 3.0, 9.0, 15.5, 18.0, 22.5, 27.0, 32.6)
 EXPECTED_CAMPAIGN_COUNT = 42
-EXPECTED_DURATION = 31.6
+EXPECTED_DURATION = 33.6
 NARRATION_WINDOWS = {
     "voice-q1.mp3": 6.02,
     "voice-a1.mp3": 2.50,

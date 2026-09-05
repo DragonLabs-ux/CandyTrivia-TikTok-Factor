@@ -31,6 +31,11 @@ STATE_BUCKET = 'candy-trivia-control'
 STATE_KEY = 'publisher/v1/state.json'
 CAMPAIGN = 'candy-premium-2026-09'
 DELIVERY_STATES = {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED', 'SENT', 'HISTORICAL', 'BLOCKED'}
+VISUAL_ROOT = ROOT / 'public' / 'visuals' / 'candy-v1'
+VISUAL_MANIFEST = VISUAL_ROOT / 'manifest.json'
+COVER_CATALOG = VISUAL_ROOT / 'covers.json'
+COVER_DURATION_SECONDS = 2
+THUMBNAIL_OFFSET_MS = 1000
 
 
 class CloudError(RuntimeError):
@@ -360,7 +365,7 @@ class Buffer:
         value = {'channelId': self.channel, 'text': post['data']['caption'], 'needsApproval': False,
             'schedulingType': 'automatic', 'mode': 'customScheduled', 'dueAt': post['scheduled_at'],
             'aiAssisted': True, 'metadata': {'tiktok': {'isAiGenerated': True}},
-            'assets': [{'video': {'url': video['url'], 'metadata': {'thumbnailOffset': 2000}}}]}
+            'assets': [{'video': {'url': video['url'], 'metadata': {'thumbnailOffset': THUMBNAIL_OFFSET_MS}}}]}
         result = self.query('mutation($input:CreatePostInput!){createPost(input:$input){__typename ... on PostActionSuccess{post{id dueAt sentAt status}} ... on MutationError{message}}}', {'input': value})['createPost']
         if result.get('__typename') != 'PostActionSuccess' or not result.get('post', {}).get('id'):
             raise CloudError('BUFFER_SUBMISSION_NOT_CONFIRMED')
@@ -414,8 +419,59 @@ def reconcile(store, buffer):
     store.change(change)
 
 
-def render(post):
+def validate_cover(post, require_approval=True):
+    try:
+        manifest = json.loads(VISUAL_MANIFEST.read_text(encoding='utf-8'))
+        catalog = json.loads(COVER_CATALOG.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        raise CloudError('THUMBNAIL_MANIFEST_MISSING_OR_INVALID') from None
+    cover = catalog.get('posts', {}).get(f"{post['number']:03d}")
+    if not cover:
+        raise CloudError('THUMBNAIL_MISSING')
+    if cover.get('usesEmojiFallback') is not False:
+        raise CloudError('EMOJI_COVER_FALLBACK_FORBIDDEN')
+    if not isinstance(cover.get('items'), list) or len(cover['items']) != 3:
+        raise CloudError('COVER_SUBJECT_IMAGES_REQUIRED')
+    if manifest.get('visualFamilyId') != catalog.get('visualFamilyId'):
+        raise CloudError('VISUAL_FAMILY_MANIFEST_MISMATCH')
+    if require_approval and manifest.get('reviewStatus') != 'approved':
+        raise CloudError('VISUAL_FAMILY_NOT_APPROVED')
+    references = [cover.get('backgroundImage'), *(item.get('subjectImage') for item in cover['items'])]
+    public = (ROOT / 'public').resolve()
+    for relative in references:
+        if not isinstance(relative, str) or not relative.startswith('visuals/candy-v1/') or '..' in relative:
+            raise CloudError('INVALID_COVER_ASSET_PATH')
+        file = (public / Path(relative)).resolve()
+        try:
+            file.relative_to(public)
+        except ValueError:
+            raise CloudError('INVALID_COVER_ASSET_PATH') from None
+        record = manifest.get('assets', {}).get(relative)
+        if not record or not file.is_file():
+            raise CloudError('COVER_ASSET_MISSING')
+        if hashlib.sha256(file.read_bytes()).hexdigest() != record.get('sha256'):
+            raise CloudError('COVER_ASSET_HASH_MISMATCH')
+        if require_approval and record.get('reviewStatus') != 'approved':
+            raise CloudError('COVER_ASSET_NOT_APPROVED')
+    return cover
+
+
+def validate_thumbnail(post):
+    file = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}-cover.png"
+    try:
+        header = file.read_bytes()[:24]
+    except OSError:
+        raise CloudError('THUMBNAIL_MISSING') from None
+    if len(header) < 24 or header[:8] != b'\x89PNG\r\n\x1a\n':
+        raise CloudError('THUMBNAIL_INVALID')
+    if int.from_bytes(header[16:20], 'big') != 1080 or int.from_bytes(header[20:24], 'big') != 1920:
+        raise CloudError('THUMBNAIL_DIMENSIONS_INVALID')
+    return file
+
+
+def render(post, require_visual_approval=True):
     import candy_production_validation as validation
+    validate_cover(post, require_visual_approval)
     env = os.environ.copy()
     env.update(OPENAI_IMAGES_ENABLED='0', TTS_ENABLED='1', TTS_VOICE='en-US-AvaNeural',
                TTS_RATE='+8%', TTS_PITCH='+0Hz', CANDY_PUBLISHING_DISABLED='1')
@@ -426,6 +482,7 @@ def render(post):
     if result.returncode:
         raise CloudError('RENDER_FAILED')
     file = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}.mp4"
+    validate_thumbnail(post)
     validation.validate_media(post['data'].get('visualTemplate', 'A'), file, file.with_suffix('.srt'))
     validation.validate_narration(post['number'])
     return file
@@ -465,7 +522,7 @@ def upload(post, file):
 def render_key(post):
     # Include every renderer/audio/font/art input. Schedules don't affect pixels.
     files = [ROOT / 'package-lock.json']
-    for folder in ('src', 'scripts', 'public/art'):
+    for folder in ('src', 'scripts', 'public/art', 'public/visuals'):
         files.extend(p for p in (ROOT / folder).rglob('*') if p.is_file())
     renderer = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(files)}
     content = {k: v for k, v in post['data'].items() if k not in {'scheduledAt', 'meta'}}
@@ -582,7 +639,7 @@ def main(argv=None):
     if args.mode == 'render-only':
         if args.post not in posts:
             raise CloudError('EXACT_POST_REQUIRED')
-        render(posts[args.post])
+        render(posts[args.post], require_visual_approval=False)
         print('Production render and media/narration checks passed; nothing uploaded or submitted.')
         return 0
     store = R2State()
