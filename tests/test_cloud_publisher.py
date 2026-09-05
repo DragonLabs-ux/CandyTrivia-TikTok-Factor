@@ -367,6 +367,10 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual(2, c.COVER_DURATION_SECONDS)
         self.assertEqual(1000, c.THUMBNAIL_OFFSET_MS)
 
+    def test_own_brand_posts_use_notification_publishing(self):
+        self.assertEqual('own_brand', c.TIKTOK_COMMERCIAL_MODE)
+        self.assertEqual('notification', c.TIKTOK_SCHEDULING_TYPE)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -89,7 +89,7 @@ export const ensureNeuralVoiceover = async (day: TriviaDay) => {
     q2: day.q2.question,
     a2: `The answer is ${day.q2.answer}.`,
     q3: day.q3.question,
-    cta: 'Answer in the comments.',
+    cta: 'Comment your answer. Search Trivia Candy Fun on the App Store.',
   }), 'utf8');
 
   try {

@@ -36,6 +36,8 @@ VISUAL_MANIFEST = VISUAL_ROOT / 'manifest.json'
 COVER_CATALOG = VISUAL_ROOT / 'covers.json'
 COVER_DURATION_SECONDS = 2
 THUMBNAIL_OFFSET_MS = 1000
+TIKTOK_COMMERCIAL_MODE = 'own_brand'
+TIKTOK_SCHEDULING_TYPE = 'notification'
 
 
 class CloudError(RuntimeError):
@@ -362,8 +364,10 @@ class Buffer:
         return list({p['id']: p for p in found if p['channelId'] == self.channel}.values())
 
     def submit(self, post, video):
+        if TIKTOK_COMMERCIAL_MODE == 'own_brand' and TIKTOK_SCHEDULING_TYPE != 'notification':
+            raise CloudError('OWN_BRAND_DISCLOSURE_REQUIRES_NOTIFICATION_PUBLISHING')
         value = {'channelId': self.channel, 'text': post['data']['caption'], 'needsApproval': False,
-            'schedulingType': 'automatic', 'mode': 'customScheduled', 'dueAt': post['scheduled_at'],
+            'schedulingType': TIKTOK_SCHEDULING_TYPE, 'mode': 'customScheduled', 'dueAt': post['scheduled_at'],
             'aiAssisted': True, 'metadata': {'tiktok': {'isAiGenerated': True}},
             'assets': [{'video': {'url': video['url'], 'metadata': {'thumbnailOffset': THUMBNAIL_OFFSET_MS}}}]}
         result = self.query('mutation($input:CreatePostInput!){createPost(input:$input){__typename ... on PostActionSuccess{post{id dueAt sentAt status}} ... on MutationError{message}}}', {'input': value})['createPost']
