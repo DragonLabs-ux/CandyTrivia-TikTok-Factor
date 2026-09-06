@@ -16,6 +16,7 @@ on:
           - shadow
           - render-only
           - activate-canary
+          - recover-canary-render
           - canary
           - promote-live
           - refill
@@ -89,7 +90,7 @@ jobs:
         shell: bash
         run: |
           case "$MODE" in
-            import-history|activate-canary|promote-live)
+            import-history|activate-canary|recover-canary-render|promote-live)
               args=("$MODE")
               if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
               python candy_cloud_admin.py "${args[@]}"

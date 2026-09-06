@@ -175,9 +175,26 @@ def promote(store):
     store.change(change)
 
 
+def recover_canary_render(store, post_id):
+    if os.environ.get('CANDY_PUBLISHING_ENABLED') == 'true':
+        raise CloudError('DISABLE_PUBLISHING_BEFORE_RECOVERY')
+    def change(s):
+        if s.get('mode') != 'canary' or s.get('canary_id') != post_id:
+            raise CloudError('RECOVERY_REQUIRES_EXACT_CANARY')
+        p = s['posts'].get(post_id)
+        if not p or p.get('status') != 'FAILED_RENDER' or p.get('render_attempts') != 3:
+            raise CloudError('RECOVERY_REQUIRES_EXHAUSTED_RENDER')
+        if p.get('video') or p.get('buffer_ids') or p.get('buffer_post_id') or p.get('attempts'):
+            raise CloudError('RECOVERY_BLOCKED_BY_SUBMISSION_EVIDENCE')
+        p.update(render_attempts=2, error='ONE_RECOVERY_ATTEMPT_AUTHORIZED')
+        event(s, 'canary_render_recovery_authorized', post_id)
+    store.change(change)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command', choices=['configure-github', 'import-history', 'freeze-local', 'activate-canary', 'promote-live'])
+    p.add_argument('command', choices=['configure-github', 'import-history', 'freeze-local', 'activate-canary',
+                                       'recover-canary-render', 'promote-live'])
     p.add_argument('--post')
     args = p.parse_args(argv)
     if args.command == 'configure-github':
@@ -191,6 +208,8 @@ def main(argv=None):
             initialize()
         elif args.command == 'activate-canary':
             activate(R2State(), args.post)
+        elif args.command == 'recover-canary-render':
+            recover_canary_render(R2State(), args.post)
         else:
             promote(R2State())
 
