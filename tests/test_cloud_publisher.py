@@ -311,6 +311,27 @@ class PublisherTests(unittest.TestCase):
         with self.assertRaises(c.CloudError):
             c.claim(self.store, self.post, 'owner', self.now)
 
+    def test_exhausted_canary_render_gets_one_evidence_free_recovery(self):
+        def exhaust(s):
+            s.update(mode='canary', canary_id=self.post['id'])
+            s['posts'][self.post['id']].update(status='FAILED_RENDER', render_attempts=3,
+                                               error='PRE_SUBMISSION_FAILED')
+        self.store.change(exhaust)
+        with patch.dict(os.environ, {'CANDY_PUBLISHING_ENABLED': 'false'}):
+            admin.recover_canary_render(self.store, self.post['id'])
+        self.assertEqual(2, self.current()['render_attempts'])
+        self.assertEqual('ONE_RECOVERY_ATTEMPT_AUTHORIZED', self.current()['error'])
+
+    def test_canary_render_recovery_rejects_submission_evidence(self):
+        def exhaust(s):
+            s.update(mode='canary', canary_id=self.post['id'])
+            s['posts'][self.post['id']].update(status='FAILED_RENDER', render_attempts=3,
+                                               error='PRE_SUBMISSION_FAILED', video={'sha256': 'evidence'})
+        self.store.change(exhaust)
+        with patch.dict(os.environ, {'CANDY_PUBLISHING_ENABLED': 'false'}):
+            with self.assertRaisesRegex(c.CloudError, 'SUBMISSION_EVIDENCE'):
+                admin.recover_canary_render(self.store, self.post['id'])
+
     def test_duplicate_content_and_provider_ids_are_rejected(self):
         s = self.store.load()[0]
         duplicate = copy.deepcopy(s['posts'][self.post['id']])

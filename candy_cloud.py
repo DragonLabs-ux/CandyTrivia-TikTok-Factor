@@ -330,6 +330,8 @@ class Buffer:
                 payload = json.load(r)
         except Exception:
             raise CloudError('BUFFER_REQUEST_FAILED') from None
+        if not isinstance(payload, dict):
+            raise CloudError('BUFFER_BAD_RESPONSE')
         if payload.get('errors'):
             if any('post not found' in str(e.get('message', '')).lower() for e in payload['errors']):
                 raise NotFound('BUFFER_POST_NOT_FOUND')
@@ -559,9 +561,11 @@ def cached_media(store, post):
 def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=cached_media):
     owner = uuid.uuid4().hex
     claim(store, post, owner, datetime.now(timezone.utc))
+    stage = 'media'
     try:
         video = cache_fn(store, post) or upload_fn(post, render_fn(post))
         video['render_key'] = render_key(post)
+        stage = 'cache_record'
         def remember(s):
             p = s['posts'][post['id']]
             if p.get('owner') != owner or p['status'] != 'RENDERING':
@@ -570,20 +574,25 @@ def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=ca
         store.change(remember)
         # Refresh external queue immediately before the irreversible call. Any
         # same-caption/same-slot item or exhausted daily count blocks submission.
+        stage = 'buffer_queue_read'
         live = buffer.list_posts()
+        stage = 'buffer_queue_check'
         target_day = dt(post['scheduled_at']).astimezone(TZ).date()
         same_day = [p for p in live if p.get('dueAt') and dt(p['dueAt']).astimezone(TZ).date() == target_day
                     and p['status'] in {'sent', 'scheduled', 'pending', 'sending'}]
         if len(same_day) >= 3 or any(p.get('text') == post['data']['caption'] for p in same_day):
             raise CloudError('BUFFER_QUEUE_CONFLICT')
+        stage = 'submission_intent'
         before_submit(store, post, owner, video, datetime.now(timezone.utc))
-    except Exception:
+    except Exception as exc:
         def failed(s):
             p = s['posts'][post['id']]
             if p['status'] == 'RENDERING' and p.get('owner') == owner:
                 p.update(status='FAILED_RENDER', error='PRE_SUBMISSION_FAILED')
         store.change(failed)
-        raise
+        if isinstance(exc, CloudError):
+            raise
+        raise CloudError('PRE_SUBMISSION_' + stage.upper() + '_FAILED') from None
     try:
         result = buffer.submit(post, video)  # Exactly one call, no retry wrapper.
         record_result(store, post['id'], owner, result)
