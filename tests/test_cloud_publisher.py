@@ -109,6 +109,12 @@ class PublisherTests(unittest.TestCase):
     def deliver(self, buffer):
         c.deliver(self.store, buffer, self.post, render_fn=lambda p: 'file', upload_fn=lambda p, f: self.video)
 
+    def test_public_media_check_uses_named_validator_user_agent(self):
+        request = c.public_media_request('https://media.example.test/video.mp4')
+        self.assertEqual('HEAD', request.get_method())
+        self.assertEqual(c.PUBLIC_MEDIA_USER_AGENT, request.get_header('User-agent'))
+        self.assertNotIn('Python-urllib', request.get_header('User-agent'))
+
     def test_missing_state_fails_closed(self):
         with self.assertRaises(c.MissingState):
             c.R2State(AtomicS3()).load()

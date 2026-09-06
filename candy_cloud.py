@@ -27,6 +27,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parent
 TZ = ZoneInfo('America/Phoenix')
 MEDIA_BUCKET = 'candy-trivia-media'
+PUBLIC_MEDIA_USER_AGENT = 'Mozilla/5.0 (compatible; CandyTriviaMediaValidator/1.0; +https://dragonlabs.app)'
 STATE_BUCKET = 'candy-trivia-control'
 STATE_KEY = 'publisher/v1/state.json'
 CAMPAIGN = 'candy-premium-2026-09'
@@ -38,6 +39,10 @@ COVER_DURATION_SECONDS = 2
 THUMBNAIL_OFFSET_MS = 1000
 TIKTOK_COMMERCIAL_MODE = 'own_brand'
 TIKTOK_SCHEDULING_TYPE = 'notification'
+
+
+def public_media_request(url):
+    return urllib.request.Request(url, method='HEAD', headers={'User-Agent': PUBLIC_MEDIA_USER_AGENT})
 
 
 class CloudError(RuntimeError):
@@ -515,7 +520,7 @@ def upload(post, file):
         raise CloudError('HTTPS_MEDIA_REQUIRED')
     url = base + '/' + key
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, method='HEAD'), timeout=30) as r:
+        with urllib.request.urlopen(public_media_request(url), timeout=30) as r:
             if r.status != 200 or r.headers.get_content_type() != 'video/mp4' or int(r.headers.get('Content-Length', 0)) != file.stat().st_size:
                 raise CloudError('PUBLIC_MEDIA_INVALID')
     except Exception:
@@ -543,7 +548,7 @@ def cached_media(store, post):
         r = s3_client().head_object(Bucket=MEDIA_BUCKET, Key=video['key'])
         if r['ContentLength'] != video['bytes'] or r.get('Metadata', {}).get('sha256') != video['sha256']:
             raise CloudError('CACHED_MEDIA_MISMATCH')
-        with urllib.request.urlopen(urllib.request.Request(video['url'], method='HEAD'), timeout=30) as public:
+        with urllib.request.urlopen(public_media_request(video['url']), timeout=30) as public:
             if public.status != 200 or public.headers.get_content_type() != 'video/mp4' or int(public.headers.get('Content-Length', 0)) != video['bytes']:
                 raise CloudError('CACHED_MEDIA_INVALID')
         return video
