@@ -47,6 +47,10 @@ jobs:
       CANDY_PUBLISHING_ENABLED: ${{ vars.CANDY_PUBLISHING_ENABLED || 'false' }}
       BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
       BUFFER_TIKTOK_CHANNEL_ID: ${{ secrets.BUFFER_TIKTOK_CHANNEL_ID }}
+      BUFFER_X_CHANNEL_ID: ${{ secrets.BUFFER_X_CHANNEL_ID }}
+      CANDY_X_PROMOTION_ENABLED: ${{ vars.CANDY_X_PROMOTION_ENABLED || 'false' }}
+      CANDY_PROMO_APP_URL: ${{ vars.CANDY_PROMO_APP_URL || 'https://apps.apple.com/us/app/trivia-candy-fun/id6768475077' }}
+      CANDY_PROMO_WEBSITE_URL: ${{ vars.CANDY_PROMO_WEBSITE_URL || '' }}
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

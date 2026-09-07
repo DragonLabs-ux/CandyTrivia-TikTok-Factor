@@ -25,9 +25,15 @@ python .\candy_autopilot.py --dry-run
 
 `candy_autopilot.py` updates the project, typechecks, audits trivia for repeats, checks Buffer for duplicate scheduled copies, selects the correct campaign date, skips already-sent or uncertain posts, renders only new videos, publishes with two-phase duplicate protection, and runs analytics. Sent TikTok posts are never deleted and uncertain publishes are never automatically retried.
 
+## Optional X/Twitter promotion
+
+The cloud publisher can also queue one companion X/Twitter Buffer post for every successfully queued Candy video. Set `BUFFER_X_CHANNEL_ID` as a GitHub encrypted secret and set the repository variable `CANDY_X_PROMOTION_ENABLED=true`. The promotion uses the same validated video media, the same scheduled time, and the App Store link in `CANDY_PROMO_APP_URL`; `CANDY_PROMO_WEBSITE_URL` can be added when the gaming website is ready.
+
+X posts are recorded separately in the private cloud ledger under `x_promo`, so an X issue does not replay a TikTok submission.
+
 ## Pipeline
 
-`trivia JSON -> local/ChatGPT candy artwork -> neural voice + premium SFX -> Remotion MP4 -> Cloudflare R2 -> Buffer -> TikTok -> analytics`
+`trivia JSON -> local/ChatGPT candy artwork -> neural voice + premium SFX -> Remotion MP4 -> Cloudflare R2 -> Buffer -> TikTok/X -> analytics`
 
 ## Super-premium visual system
 
