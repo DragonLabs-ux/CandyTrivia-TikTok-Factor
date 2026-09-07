@@ -71,6 +71,15 @@ class FakeBuffer:
         return self.found[bid]
 
 
+class FakeXBuffer(FakeBuffer):
+    def submit_x_promotion(self, post, video):
+        self.calls += 1
+        if self.timeout:
+            raise c.CloudError('timeout after provider accepted')
+        return {'id': 'x-buffer-new', 'status': 'scheduled', 'dueAt': post['scheduled_at'],
+                'text': c.x_promotion_text(post)}
+
+
 class WitnessS3(AtomicS3):
     def __init__(self):
         super().__init__()
@@ -87,7 +96,8 @@ class WitnessS3(AtomicS3):
 
 class PublisherTests(unittest.TestCase):
     def setUp(self):
-        self.env = patch.dict(os.environ, {'BUFFER_TIKTOK_CHANNEL_ID': 'candy-test'}, clear=False)
+        self.env = patch.dict(os.environ, {'BUFFER_TIKTOK_CHANNEL_ID': 'candy-test',
+            'CANDY_X_PROMOTION_ENABLED': 'false'}, clear=False)
         self.env.start()
         self.addCleanup(self.env.stop)
         self.now = datetime.now(timezone.utc)
@@ -191,6 +201,38 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual('SCHEDULED', self.current()['status'])
         self.assertEqual(['buffer-new'], self.current()['buffer_ids'])
         self.assertEqual(1, buffer.calls)
+        self.assertNotIn('x_promo', self.current())
+
+    def test_enabled_x_promotion_records_separate_buffer_id(self):
+        buffer = FakeBuffer()
+        x = FakeXBuffer()
+        with patch.dict(os.environ, {'CANDY_X_PROMOTION_ENABLED': 'true'}):
+            c.deliver(self.store, buffer, self.post, render_fn=lambda p: 'file',
+                      upload_fn=lambda p, f: self.video, x_channel=x)
+        current = self.current()
+        self.assertEqual('SCHEDULED', current['status'])
+        self.assertEqual(['buffer-new'], current['buffer_ids'])
+        self.assertEqual('SCHEDULED', current['x_promo']['status'])
+        self.assertEqual(['x-buffer-new'], current['x_promo']['buffer_ids'])
+        self.assertIn('Trivia Candy Fun', current['x_promo']['text'])
+        self.assertEqual(1, buffer.calls)
+        self.assertEqual(1, x.calls)
+
+    def test_x_timeout_does_not_replay_tiktok_submission(self):
+        buffer = FakeBuffer()
+        x = FakeXBuffer(timeout=True)
+        with patch.dict(os.environ, {'CANDY_X_PROMOTION_ENABLED': 'true'}):
+            with self.assertRaisesRegex(c.CloudError, 'X_SUBMISSION_UNCERTAIN'):
+                c.deliver(self.store, buffer, self.post, render_fn=lambda p: 'file',
+                          upload_fn=lambda p, f: self.video, x_channel=x)
+            with self.assertRaises(c.CloudError):
+                c.deliver(self.store, buffer, self.post, render_fn=lambda p: 'file',
+                          upload_fn=lambda p, f: self.video, x_channel=x)
+        current = self.current()
+        self.assertEqual('SCHEDULED', current['status'])
+        self.assertEqual('UNCERTAIN', current['x_promo']['status'])
+        self.assertEqual(1, buffer.calls)
+        self.assertEqual(1, x.calls)
 
     def test_provider_timeout_never_retries(self):
         buffer = FakeBuffer(timeout=True)
@@ -344,6 +386,12 @@ class PublisherTests(unittest.TestCase):
         s['posts'][self.post['id']]['buffer_ids'] = ['same-id']
         with self.assertRaisesRegex(c.CloudError, 'DUPLICATE_BUFFER_ID_STATE'):
             c.validate_state(s)
+        duplicate['buffer_ids'] = []
+        s['posts'][self.post['id']]['buffer_ids'] = []
+        duplicate['x_promo'] = {'buffer_ids': ['same-x-id']}
+        s['posts'][self.post['id']]['x_promo'] = {'buffer_ids': ['same-x-id']}
+        with self.assertRaisesRegex(c.CloudError, 'DUPLICATE_X_BUFFER_ID_STATE'):
+            c.validate_state(s)
 
     def test_cover_gate_rejects_pending_or_emoji_visuals(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -397,6 +445,11 @@ class PublisherTests(unittest.TestCase):
     def test_own_brand_posts_use_notification_publishing(self):
         self.assertEqual('own_brand', c.TIKTOK_COMMERCIAL_MODE)
         self.assertEqual('notification', c.TIKTOK_SCHEDULING_TYPE)
+
+    def test_x_promotion_copy_fits_x_limit(self):
+        text = c.x_promotion_text(self.post)
+        self.assertLessEqual(len(text), 280)
+        self.assertIn(c.DEFAULT_PROMO_APP_URL, text)
 
 
 if __name__ == '__main__':

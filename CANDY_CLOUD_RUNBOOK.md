@@ -29,6 +29,7 @@ Required GitHub Actions secrets:
 ```text
 BUFFER_API_KEY
 BUFFER_TIKTOK_CHANNEL_ID
+BUFFER_X_CHANNEL_ID          # Optional: required only when X promotion is enabled
 R2_ACCOUNT_ID
 R2_ACCESS_KEY_ID
 R2_SECRET_ACCESS_KEY
@@ -54,6 +55,9 @@ Repository variables:
 CANDY_CLOUD_CONFIGURED=false  # Set true only after successful history import.
 CANDY_CLOUD_MODE=shadow      # After verified canary, change to refill.
 CANDY_PUBLISHING_ENABLED=false
+CANDY_X_PROMOTION_ENABLED=false
+CANDY_PROMO_APP_URL=https://apps.apple.com/us/app/trivia-candy-fun/id6768475077
+CANDY_PROMO_WEBSITE_URL=
 ```
 
 The source workflow must be on the default branch, `main`, for scheduled runs. Production submissions additionally verify `GITHUB_ACTIONS=true` and `GITHUB_REF=refs/heads/main`. A manual branch run can perform nonpublishing validation but cannot use the normal production submission mode.
@@ -72,6 +76,12 @@ The source workflow must be on the default branch, `main`, for scheduled runs. P
 10. Reconcile after its delivery window. Run `promote-live` only once the canary is confirmed SENT. Set `CANDY_CLOUD_MODE=refill`. The hourly timer then maintains the queue.
 
 The scripts do not bypass the 48-hour gate or label a queued post SENT. A one-post canary must deliver before full unattended scheduling is enabled.
+
+**Optional X promotion**
+
+When `CANDY_X_PROMOTION_ENABLED=true`, each successfully queued Candy TikTok video also queues one companion X/Twitter promotion through Buffer, using the same validated video media and scheduled time. The X lane requires a separate Buffer channel secret named `BUFFER_X_CHANNEL_ID`, records its own `x_promo` status and Buffer IDs in the private ledger, and does not consume TikTok queue capacity.
+
+X promotion is intentionally independent from TikTok delivery status: a TikTok Buffer submission is still recorded once, and an uncertain X submission blocks only the X companion lane for that post. Do not enable the X lane until the connected X account in Buffer is the intended gaming/app promotion account.
 
 **Remote controls**
 

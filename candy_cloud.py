@@ -39,6 +39,7 @@ COVER_DURATION_SECONDS = 2
 THUMBNAIL_OFFSET_MS = 1000
 TIKTOK_COMMERCIAL_MODE = 'own_brand'
 TIKTOK_SCHEDULING_TYPE = 'notification'
+DEFAULT_PROMO_APP_URL = 'https://apps.apple.com/us/app/trivia-candy-fun/id6768475077'
 
 
 def public_media_request(url):
@@ -81,6 +82,10 @@ def required(name):
     if not value:
         raise CloudError('MISSING_' + name)
     return value
+
+
+def enabled(name):
+    return os.environ.get(name, '').strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
 def load_local_env():
@@ -127,6 +132,11 @@ def validate_state(s):
             if bid in buffer_ids and buffer_ids[bid] != key:
                 raise CloudError('DUPLICATE_BUFFER_ID_STATE')
             buffer_ids[bid] = key
+        for bid in row.get('x_promo', {}).get('buffer_ids', []):
+            x_key = 'x:' + bid
+            if x_key in buffer_ids and buffer_ids[x_key] != key:
+                raise CloudError('DUPLICATE_X_BUFFER_ID_STATE')
+            buffer_ids[x_key] = key
 
 
 class R2State:
@@ -318,8 +328,11 @@ def record_result(store, post_id, owner, result=None):
 
 
 class Buffer:
-    def __init__(self):
-        self.channel = required('BUFFER_TIKTOK_CHANNEL_ID')
+    def __init__(self, channel_env='BUFFER_TIKTOK_CHANNEL_ID', services=('tiktok',), mismatch='NOT_CANDY_TIKTOK_CHANNEL'):
+        self.channel_env = channel_env
+        self.channel = required(channel_env)
+        self.services = {service.lower() for service in services}
+        self.mismatch = mismatch
 
     def query(self, query, variables=None):
         request = urllib.request.Request('https://api.buffer.com',
@@ -342,8 +355,9 @@ class Buffer:
 
     def channel_check(self):
         data = self.query('query($id:ChannelId!){channel(input:{id:$id}){id name service}}', {'id': self.channel})
-        if data['channel']['service'] != 'tiktok' or data['channel']['id'] != self.channel:
-            raise CloudError('NOT_CANDY_TIKTOK_CHANNEL')
+        service = str(data['channel']['service']).lower()
+        if service not in self.services or data['channel']['id'] != self.channel:
+            raise CloudError(self.mismatch)
         return data['channel']
 
     def get(self, bid, metrics=False):
@@ -381,6 +395,16 @@ class Buffer:
         if result.get('__typename') != 'PostActionSuccess' or not result.get('post', {}).get('id'):
             raise CloudError('BUFFER_SUBMISSION_NOT_CONFIRMED')
         return result['post']
+
+    def submit_x_promotion(self, post, video):
+        text = x_promotion_text(post)
+        value = {'channelId': self.channel, 'text': text, 'needsApproval': False,
+            'schedulingType': 'automatic', 'mode': 'customScheduled', 'dueAt': post['scheduled_at'],
+            'assets': [{'video': {'url': video['url']}}]}
+        result = self.query('mutation($input:CreatePostInput!){createPost(input:$input){__typename ... on PostActionSuccess{post{id dueAt sentAt status}} ... on MutationError{message}}}', {'input': value})['createPost']
+        if result.get('__typename') != 'PostActionSuccess' or not result.get('post', {}).get('id'):
+            raise CloudError('X_BUFFER_SUBMISSION_NOT_CONFIRMED')
+        return {**result['post'], 'text': text}
 
 
 def reconcile(store, buffer):
@@ -428,6 +452,120 @@ def reconcile(store, buffer):
             # No IDs / not-found never restores APPROVED.
         s['last_reconcile'] = now_iso()
     store.change(change)
+
+
+def x_promotion_enabled():
+    return enabled('CANDY_X_PROMOTION_ENABLED')
+
+
+def x_buffer():
+    return Buffer('BUFFER_X_CHANNEL_ID', ('twitter', 'x'), 'NOT_CANDY_X_CHANNEL')
+
+
+def x_promotion_text(post):
+    app = os.environ.get('CANDY_PROMO_APP_URL', DEFAULT_PROMO_APP_URL).strip() or DEFAULT_PROMO_APP_URL
+    website = os.environ.get('CANDY_PROMO_WEBSITE_URL', '').strip()
+    hook = str(post['data'].get('hook') or 'Can you get 3/3?').strip().rstrip('?!')
+    lines = [f'{hook}? Play Trivia Candy Fun.', app]
+    if website:
+        lines.append('More games: ' + website)
+    lines.append('#TriviaCandyFun #Trivia #MobileGames')
+    text = '\n'.join(lines)
+    if len(text) <= 280:
+        return text
+    text = f'Play Trivia Candy Fun: {app}\n#TriviaCandyFun #Trivia'
+    if len(text) > 280:
+        raise CloudError('X_PROMO_TEXT_TOO_LONG')
+    return text
+
+
+def x_before_submit(store, post, owner, video, now):
+    def change(s):
+        p = s['posts'][post['id']]
+        promo = p.setdefault('x_promo', {'buffer_ids': [], 'attempts': []})
+        if promo.get('status') in {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED', 'SENT'}:
+            raise CloudError('X_PROMOTION_ALREADY_SUBMITTED')
+        promo.update(status='SUBMITTING', owner=owner, video=video, submitted_at=now.isoformat(),
+                     text=x_promotion_text(post))
+        promo.setdefault('attempts', []).append({'id': owner, 'at': now.isoformat(),
+            'status': 'SUBMITTING', 'video_hash': video['sha256']})
+        event(s, 'x_submitting', post['id'])
+    store.change(change)
+
+
+def x_record_result(store, post_id, owner, result=None):
+    def change(s):
+        promo = s['posts'][post_id].setdefault('x_promo', {'buffer_ids': [], 'attempts': []})
+        if promo.get('owner') != owner or promo.get('status') not in {'SUBMITTING', 'UNCERTAIN'}:
+            raise CloudError('X_SUBMISSION_STATE_CHANGED')
+        if result:
+            promo.setdefault('buffer_ids', [])
+            if result['id'] not in promo['buffer_ids']:
+                promo['buffer_ids'].append(result['id'])
+            status = 'SENT' if result.get('status') == 'sent' else 'SCHEDULED' if result.get('status') == 'scheduled' else 'BLOCKED'
+            promo.update(status=status, buffer_post_id=result['id'], due_at=result.get('dueAt'),
+                         sent_at=result.get('sentAt'), text=result.get('text', promo.get('text')))
+        else:
+            promo['status'] = 'UNCERTAIN'
+        promo.setdefault('attempts', [{'id': owner, 'status': 'SUBMITTING'}])[-1]['status'] = promo['status']
+        event(s, 'x_' + promo['status'].lower(), post_id)
+    store.change(change)
+
+
+def reconcile_x(store, buffer):
+    state, _ = store.load()
+    updates = {}
+    for key, p in state['posts'].items():
+        promo = p.get('x_promo') or {}
+        if promo.get('status') not in {'SCHEDULED', 'SUBMITTING', 'UNCERTAIN', 'BLOCKED'}:
+            continue
+        seen = []
+        for bid in promo.get('buffer_ids', []):
+            try:
+                seen.append(buffer.get(bid))
+            except NotFound:
+                seen.append({'id': bid, 'status': 'not_found'})
+        updates[key] = seen
+    def change(s):
+        for key, seen in updates.items():
+            promo = s['posts'][key].setdefault('x_promo', {'buffer_ids': [], 'attempts': []})
+            promo['observations'] = [{k: row.get(k) for k in ('id', 'status', 'dueAt', 'sentAt', 'externalLink')} for row in seen]
+            promo['reconciled_at'] = now_iso()
+            sent = [r for r in seen if r['status'] == 'sent']
+            scheduled = [r for r in seen if r['status'] == 'scheduled']
+            if sent:
+                promo.update(status='SENT', sent_at=sent[0].get('sentAt'), buffer_post_id=sent[0]['id'])
+            elif promo.get('status') == 'SENT':
+                continue
+            elif len(scheduled) == 1:
+                promo.update(status='SCHEDULED', buffer_post_id=scheduled[0]['id'], due_at=scheduled[0].get('dueAt'))
+            elif len(scheduled) > 1:
+                promo.update(status='BLOCKED', error='MULTIPLE_X_SCHEDULED_COPIES')
+            elif promo.get('status') in {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED'}:
+                promo.update(status='UNCERTAIN', error='X_RECONCILIATION_REQUIRED')
+        s['last_x_reconcile'] = now_iso()
+    store.change(change)
+
+
+def schedule_x_promotion(store, buffer, post, video):
+    owner = uuid.uuid4().hex
+    text = x_promotion_text(post)
+    live = buffer.list_posts()
+    target_day = dt(post['scheduled_at']).astimezone(TZ).date()
+    same_day = [p for p in live if p.get('dueAt') and dt(p['dueAt']).astimezone(TZ).date() == target_day
+                and p['status'] in {'sent', 'scheduled', 'pending', 'sending'}]
+    if any(p.get('text') == text for p in same_day):
+        raise CloudError('X_BUFFER_QUEUE_CONFLICT')
+    x_before_submit(store, post, owner, video, datetime.now(timezone.utc))
+    try:
+        result = buffer.submit_x_promotion(post, video)
+        x_record_result(store, post['id'], owner, result)
+    except Exception:
+        try:
+            x_record_result(store, post['id'], owner)
+        except Exception:
+            pass
+        raise CloudError('X_SUBMISSION_UNCERTAIN_CHECK_BUFFER') from None
 
 
 def validate_cover(post, require_approval=True):
@@ -558,7 +696,7 @@ def cached_media(store, post):
         raise CloudError('CACHED_MEDIA_VERIFICATION_FAILED') from None
 
 
-def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=cached_media):
+def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=cached_media, x_channel=None):
     owner = uuid.uuid4().hex
     claim(store, post, owner, datetime.now(timezone.utc))
     stage = 'media'
@@ -602,6 +740,8 @@ def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=ca
         except Exception:
             pass  # Durable SUBMITTING already prevents retries if R2 is down.
         raise CloudError('SUBMISSION_UNCERTAIN_CHECK_BUFFER') from None
+    if x_promotion_enabled():
+        schedule_x_promotion(store, x_channel or x_buffer(), post, video)
 
 
 def analytics(store, buffer):
@@ -632,11 +772,15 @@ def report(state, posts, planned=None):
     now = datetime.now(timezone.utc)
     future_days = {dt(p['scheduled_at']).astimezone(TZ).date() for p in state['posts'].values()
                    if dt(p['scheduled_at']) > now and p['status'] in {'APPROVED', 'SCHEDULED'}}
+    x_statuses = Counter((p.get('x_promo') or {}).get('status') for p in state['posts'].values()
+                         if (p.get('x_promo') or {}).get('status'))
     value = {'mode': state.get('mode'), 'paused': state.get('paused'),
         'statuses': dict(Counter(p['status'] for p in state['posts'].values())),
+        'x_promo_enabled': x_promotion_enabled(), 'x_promo_statuses': dict(x_statuses),
         'future_content_days': len(future_days), 'content_low': len(future_days) < 7,
         'would_process': [p['id'] for p in planned or []],
-        'attention': [p['id'] for p in state['posts'].values() if p['status'] in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}],
+        'attention': [p['id'] for p in state['posts'].values() if p['status'] in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}
+                      or (p.get('x_promo') or {}).get('status') in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}],
         'local_publisher_disabled': state.get('local_disabled', False)}
     print(json.dumps(value, indent=2))
     if path := os.environ.get('GITHUB_STEP_SUMMARY'):
@@ -672,6 +816,11 @@ def main(argv=None):
     buffer = Buffer()
     buffer.channel_check()
     reconcile(store, buffer)
+    x_channel = None
+    if x_promotion_enabled():
+        x_channel = x_buffer()
+        x_channel.channel_check()
+        reconcile_x(store, x_channel)
     state, _ = store.load()
     planned = candidates(state, posts, datetime.now(timezone.utc))
     if args.mode == 'shadow':
@@ -698,7 +847,7 @@ def main(argv=None):
             raise CloudError('LIVE_MODE_NOT_ACTIVATED')
         for post in planned[:capacity]:
             print('Processing ' + post['id'], flush=True)
-            deliver(store, buffer, post)
+            deliver(store, buffer, post, x_channel=x_channel)
     state, _ = store.load()
     value = report(state, posts, planned)
     return 2 if value['attention'] else 0

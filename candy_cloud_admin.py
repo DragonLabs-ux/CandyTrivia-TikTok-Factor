@@ -128,6 +128,9 @@ def configure():
         if os.environ.get(name):
             gh(['secret', 'set', name, '--repo', REPO], os.environ[name])
             print('Configured encrypted secret: ' + name)
+    if os.environ.get('BUFFER_X_CHANNEL_ID'):
+        gh(['secret', 'set', 'BUFFER_X_CHANNEL_ID', '--repo', REPO], os.environ['BUFFER_X_CHANNEL_ID'])
+        print('Configured encrypted secret: BUFFER_X_CHANNEL_ID')
     history = json.dumps(export_history(), separators=(',', ':')).encode()
     encoded = base64.b64encode(history).decode()
     if len(encoded) > 45000:
