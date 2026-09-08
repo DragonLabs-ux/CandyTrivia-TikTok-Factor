@@ -99,19 +99,18 @@ jobs:
               if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
               python candy_cloud_admin.py "${args[@]}"
               ;;
+            analytics)
+              python candy_metrics.py
+              ;;
             *)
               args=(--mode "$MODE")
               if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
               python candy_cloud.py "${args[@]}"
               ;;
           esac
-      - name: Collect available daily analytics
-        if: github.event_name == 'schedule'
-        shell: bash
-        run: |
-          if [[ "$(date -u +%H)" == "08" ]]; then
-            python candy_cloud.py --mode analytics
-          fi
+      - name: Collect due 1h 24h and 72h analytics checkpoints
+        if: github.event_name == 'schedule' && env.MODE != 'analytics'
+        run: python candy_metrics.py
       - name: Failure guidance
         if: failure()
         run: |
