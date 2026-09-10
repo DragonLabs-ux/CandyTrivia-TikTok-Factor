@@ -30,8 +30,8 @@ jobs:
           python-version: '3.12'
       - run: npm ci
       - run: python -m pip install Pillow==11.3.0
-      - name: Render covers 011-024
-        run: npm run render-covers -- $(printf 'examples/auto/post-%03d.json ' $(seq 11 24))
+      - name: Render covers 011-043
+        run: npm run render-covers -- $(printf 'examples/auto/post-%03d.json ' $(seq 11 43))
       - name: Render non-publishing production sample
         run: npm run render -- examples/auto/post-013.json
       - name: Build full-size and phone-size contact sheets
@@ -41,7 +41,7 @@ jobs:
       - name: Upload visual review package
         uses: actions/upload-artifact@v4
         with:
-          name: candy-visual-review-011-024
+          name: candy-visual-review-011-043
           if-no-files-found: error
           retention-days: 14
           path: |
