@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build deterministic large and phone-size review sheets from cover proofs."""
 from pathlib import Path
+from math import ceil
 
 from PIL import Image
 
@@ -12,14 +13,16 @@ OUTPUT = ROOT / 'out' / 'review'
 
 def build(name: str, tile: tuple[int, int]) -> None:
     files = sorted(PROOFS.glob('post-*-cover.png'))
-    if len(files) != 14:
-        raise RuntimeError(f'Expected 14 cover proofs, found {len(files)}')
+    if not files:
+        raise RuntimeError('Expected at least 1 cover proof, found 0')
     width, height = tile
-    sheet = Image.new('RGB', (width * 4, height * 4), 'black')
+    columns = 4
+    rows = ceil(len(files) / columns)
+    sheet = Image.new('RGB', (width * columns, height * rows), 'black')
     for index, file in enumerate(files):
         with Image.open(file) as source:
             image = source.convert('RGB').resize(tile, Image.Resampling.LANCZOS)
-        sheet.paste(image, ((index % 4) * width, (index // 4) * height))
+        sheet.paste(image, ((index % columns) * width, (index // columns) * height))
     sheet.save(OUTPUT / name, format='PNG', optimize=True)
 
 
