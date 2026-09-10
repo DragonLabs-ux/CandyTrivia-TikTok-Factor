@@ -1,6 +1,7 @@
 name: Candy Approved Content Import
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths: ['examples/auto/post-*.json']
