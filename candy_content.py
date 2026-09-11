@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Create a reviewable seven-day Candy batch; never publish or approve it."""
-import argparse, json, os, re, urllib.request
+import argparse, json, os, re, time, urllib.error, urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
 from candy_cloud import ROOT, TZ, CloudError, load_campaign
@@ -31,8 +31,18 @@ def request_json(prompt, schema, name):
     req = urllib.request.Request(
         'https://api.openai.com/v1/responses', data=json.dumps(body).encode(),
         headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'})
-    with urllib.request.urlopen(req, timeout=600) as response:
-        return json.loads(response_text(json.load(response)))
+    for attempt in range(5):
+        try:
+            with urllib.request.urlopen(req, timeout=600) as response:
+                return json.loads(response_text(json.load(response)))
+        except urllib.error.HTTPError as exc:
+            if exc.code != 429 or attempt == 4:
+                raise
+            retry_after = exc.headers.get('Retry-After')
+            delay = int(retry_after) if retry_after and retry_after.isdigit() else 30 * (attempt + 1)
+            print(f'OpenAI rate limit; retrying in {delay}s.', flush=True)
+            time.sleep(delay)
+    raise CloudError('CONTENT_RESPONSE_MISSING')
 
 def fact_checks(facts):
     count = len(facts)

@@ -1,4 +1,6 @@
+import json
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
@@ -56,6 +58,29 @@ class ContentVerificationTests(unittest.TestCase):
         workflow = Path('.github/workflows/candy-weekly-content.yml').read_text(encoding='utf-8')
         self.assertIn('candy-premium-2026-09:', workflow)
         self.assertNotIn('candy-tiktok-auto:', workflow)
+
+    def test_request_json_retries_transient_rate_limit(self):
+        response = {'output': [{'content': [{'type': 'output_text', 'text': '{"ok": true}'}]}]}
+        error = urllib.error.HTTPError('https://api.openai.com/v1/responses', 429, 'rate limited', {}, None)
+        with patch.dict('os.environ', {'OPENAI_API_KEY': 'test'}), \
+             patch('time.sleep'), \
+             patch('urllib.request.urlopen') as urlopen:
+            urlopen.side_effect = [error, _FakeResponse(response)]
+            self.assertEqual({'ok': True}, content.request_json('prompt', {}, 'test_schema'))
+
+
+class _FakeResponse:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self, *args):
+        return json.dumps(self.payload).encode()
 
 
 if __name__ == '__main__':
