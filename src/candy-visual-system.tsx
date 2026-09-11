@@ -24,6 +24,11 @@ export type SceneCommon = {
   image?: string;
 };
 
+export type CoverItem = {
+  label: string;
+  subjectImage: string;
+};
+
 const SAFE_LEFT = 68;
 const SAFE_RIGHT = 178;
 const SAFE_WIDTH = 1080 - SAFE_LEFT - SAFE_RIGHT;
@@ -77,6 +82,51 @@ const SceneShell: React.FC<SceneCommon & {children: React.ReactNode; durationInF
         </Interactive.Div>
       ) : null}
       <SceneMotion durationInFrames={props.durationInFrames}>{props.children}</SceneMotion>
+    </AbsoluteFill>
+  );
+};
+
+export const CoverScene: React.FC<{
+  heading: string;
+  backgroundImage: string;
+  items: CoverItem[];
+  hook: string;
+}> = ({heading, backgroundImage, items, hook}) => {
+  const frame = useCurrentFrame();
+  const entrance = interpolate(frame, [0, 10], [0.96, 1], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: Easing.bezier(0.16, 1, 0.3, 1), output: 'perceptual-scale',
+  });
+  return (
+    <AbsoluteFill style={{overflow: 'hidden', background: '#19072f'}}>
+      <Img
+        src={staticFile(backgroundImage)}
+        style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', scale: 1.025 + frame / 5000, filter: 'saturate(1.08) contrast(1.04)'}}
+      />
+      <AbsoluteFill style={{background: 'linear-gradient(180deg,rgba(17,4,43,.2) 0%,rgba(25,5,54,.18) 34%,rgba(20,4,42,.78) 71%,rgba(12,2,29,.94) 100%)'}} />
+      <div style={{position: 'absolute', left: 68, top: 86, display: 'flex', alignItems: 'center', gap: 15, padding: '13px 24px 13px 14px', borderRadius: 999, color: '#fff', background: 'linear-gradient(145deg,rgba(255,57,165,.97),rgba(104,61,232,.97))', border: '4px solid rgba(255,255,255,.9)', boxShadow: '0 18px 50px rgba(35,5,63,.45)'}}>
+        <div style={{width: 58, height: 58, borderRadius: 18, display: 'grid', placeItems: 'center', background: 'linear-gradient(145deg,#fff7ad,#ffc94c)'}}>
+          <Img src={staticFile('art/icon-crown.svg')} style={{width: 46, height: 46}} />
+        </div>
+        <span style={{fontFamily: displayFont, fontSize: 34, fontWeight: 900, letterSpacing: 1}}>TRIVIA CANDY</span>
+      </div>
+      <div style={{position: 'absolute', left: 68, width: 834, top: 326, color: '#fff', fontFamily: displayFont, fontSize: heading.length > 25 ? 69 : 82, fontWeight: 900, lineHeight: 0.94, letterSpacing: -1.8, textWrap: 'balance', textShadow: '0 7px 0 rgba(72,16,114,.72),0 18px 48px rgba(18,2,35,.72)', scale: entrance}}>
+        {heading}
+      </div>
+      <div style={{position: 'absolute', left: 68, top: 930, width: 834, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18}}>
+        {items.map((item, index) => {
+          const rise = interpolate(frame, [5 + index * 4, 17 + index * 4], [34, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1)});
+          return (
+            <div key={`${item.label}-${item.subjectImage}`} style={{height: 318, overflow: 'hidden', borderRadius: 34, background: 'rgba(255,255,255,.94)', border: '5px solid #fff7b2', boxShadow: '0 22px 48px rgba(20,2,42,.52)', translate: `0 ${rise}px`}}>
+              <Img src={staticFile(item.subjectImage)} style={{width: '100%', height: 232, objectFit: 'cover'}} />
+              <div style={{height: 86, display: 'grid', placeItems: 'center', padding: '0 10px', color: '#421254', textAlign: 'center', fontFamily: bodyFont, fontSize: item.label.length > 12 ? 20 : 24, fontWeight: 1000, lineHeight: 1, letterSpacing: 1.1}}>{item.label}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{position: 'absolute', left: 68, top: 1390, width: 834, padding: '30px 34px', boxSizing: 'border-box', borderRadius: 999, color: '#301043', textAlign: 'center', background: 'linear-gradient(145deg,#fff9a9,#ffd04b)', border: '6px solid #fff', boxShadow: '0 25px 60px rgba(20,2,42,.6)', fontFamily: displayFont, fontSize: 48, fontWeight: 900, lineHeight: 1, letterSpacing: 0.5}}>
+        {hook}
+      </div>
     </AbsoluteFill>
   );
 };
@@ -300,7 +350,7 @@ export const CtaScene: React.FC<SceneCommon & {durationInFrames: number; cta: st
         <div style={{marginTop: 18, fontFamily: displayFont, fontSize: textSize(props.cta, 75, 66, 58), lineHeight: 1, fontWeight: 800, letterSpacing: -1.5}}>{props.cta}</div>
         <div style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 530, marginTop: 42, padding: '26px 34px', borderRadius: props.template === 'B' ? 20 : 999, color: '#fff', background: `linear-gradient(145deg,${theme.accent},${theme.accent2})`, border: `6px solid ${theme.accent3}`, boxShadow: `inset 0 8px 13px rgba(255,255,255,.32), 0 20px 44px ${theme.panelShadow}`, fontFamily: bodyFont, fontSize: 31, fontWeight: 900, letterSpacing: 1.6}}>COMMENT • FOLLOW • PLAY MORE</div>
       </Interactive.Div>
-      <Interactive.Div name="TXT_APP_PROMO" style={{position: 'absolute', left: 238, width: 560, top: 1175, padding: '16px 22px', boxSizing: 'border-box', borderRadius: 999, textAlign: 'center', color: '#fff', background: 'rgba(19,6,36,.68)', border: '2px solid rgba(255,255,255,.42)', boxShadow: '0 14px 30px rgba(25,4,43,.3)', fontFamily: bodyFont, fontSize: 29, lineHeight: 1.16, fontWeight: 900, letterSpacing: 1.8, textShadow: '0 5px 14px rgba(35,6,55,.7)'}}>TRIVIA CANDY FUN<br/><span style={{color: theme.accent3, fontSize: 23}}>AVAILABLE ON iPHONE &amp; iPAD</span></Interactive.Div>
+      <Interactive.Div name="TXT_APP_PROMO" style={{position: 'absolute', left: 238, width: 560, top: 1175, padding: '16px 22px', boxSizing: 'border-box', borderRadius: 999, textAlign: 'center', color: '#fff', background: 'rgba(19,6,36,.68)', border: '2px solid rgba(255,255,255,.42)', boxShadow: '0 14px 30px rgba(25,4,43,.3)', fontFamily: bodyFont, fontSize: 27, lineHeight: 1.16, fontWeight: 900, letterSpacing: 1.5, textShadow: '0 5px 14px rgba(35,6,55,.7)'}}>SEARCH “TRIVIA CANDY FUN”<br/><span style={{color: theme.accent3, fontSize: 23}}>ON THE APP STORE</span></Interactive.Div>
       <BurnedCaption caption={props.cta} template={props.template} label="YOUR TURN" />
     </SceneShell>
   );

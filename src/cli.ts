@@ -3,13 +3,13 @@ import {discoverBufferChannels} from './buffer-channels.js';
 import {recordPendingComment, runPendingComments} from './comments.js';
 import {assertUniquePublication, auditContentFiles, recordPublishedContent} from './dedupe.js';
 import {renderLocalDay} from './local-render.js';
-import {loadDay, publishRenderedDay, renderDay, renderReviewDay, runDay} from './pipeline.js';
+import {loadDay, publishRenderedDay, renderCoverProofs, renderDay, renderReviewDay, runDay} from './pipeline.js';
 
 const command = process.argv[2];
 const files = process.argv.slice(3);
 
 const usage = () => {
-  console.log(`Candy Trivia TikTok Factory\n\nCommands:\n  npm run channels\n  npm run analytics\n  npm run analytics -- <bufferPostId> [bufferPostId ...]\n  npm run comments\n  npm run comments -- <bufferPostId> [bufferPostId ...]\n  npm run audit-content\n  npm run audit-content -- examples/auto/post-001.json [more files ...]\n  npm run render-previews -- examples/day-001.json\n  npm run render -- examples/day-001.json\n  npm run render-local -- examples/day-001.json\n  npm run publish -- examples/day-001.json\n  npm run run -- examples/day-001.json [examples/day-002.json ...]\n`);
+  console.log(`Candy Trivia TikTok Factory\n\nCommands:\n  npm run channels\n  npm run analytics\n  npm run analytics -- <bufferPostId> [bufferPostId ...]\n  npm run comments\n  npm run comments -- <bufferPostId> [bufferPostId ...]\n  npm run audit-content\n  npm run audit-content -- examples/auto/post-001.json [more files ...]\n  npm run render-previews -- examples/day-001.json\n  npm run render-covers -- examples/auto/post-011.json [more files ...]\n  npm run render -- examples/day-001.json\n  npm run render-local -- examples/day-001.json\n  npm run publish -- examples/day-001.json\n  npm run run -- examples/day-001.json [examples/day-002.json ...]\n`);
 };
 
 const runFiles = async (handler: (day: Awaited<ReturnType<typeof loadDay>>) => Promise<unknown>) => {
@@ -64,6 +64,14 @@ try {
     case 'render-previews':
       await runFiles(async (day) => ({previews: await renderReviewDay(day)}));
       break;
+    case 'render-covers': {
+      if (files.length === 0) throw new Error('Provide at least one trivia-day JSON file.');
+      const days = [];
+      for (const file of files) days.push(await loadDay(file));
+      const covers = await renderCoverProofs(days);
+      console.log(JSON.stringify({covers}, null, 2));
+      break;
+    }
     case 'publish':
       await runFiles((day) => publishAndQueueComment(day));
       break;

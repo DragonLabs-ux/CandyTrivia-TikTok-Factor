@@ -1,0 +1,32 @@
+{
+  "day": 43,
+  "q1": {
+    "question": "Which candy was introduced in 1941?",
+    "answer": "M&M's",
+    "answers": ["Skittles", "M&M's", "Reese's Cups", "Twix"]
+  },
+  "q2": {
+    "question": "What year were Reese's Peanut Butter Cups created?",
+    "answer": "1928",
+    "answers": ["1905", "1928", "1941", "1963"]
+  },
+  "q3": {
+    "question": "Which country first sold Skittles?",
+    "answer": "United Kingdom",
+    "withhold": true
+  },
+  "caption": "Can you get 3/3? Sweet candy facts. #trivia #candytok #quiztime #snackfacts",
+  "scheduledAt": "2026-09-15T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 15,
+    "slot": 1,
+    "format": "real-candy-trivia-test",
+    "goal": "quality-check",
+    "sources": [
+      "https://www.mars.com/about/history",
+      "https://investors.thehersheycompany.com/content/hersheyland/en-us/home/about-us/history.html",
+      "https://www.thechicagobrandmuseum.com/skittles"
+    ]
+  },
+  "visualTemplate": "A"
+}

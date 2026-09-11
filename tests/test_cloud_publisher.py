@@ -4,6 +4,7 @@ import io
 import json
 import os
 import sys
+import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -70,6 +71,15 @@ class FakeBuffer:
         return self.found[bid]
 
 
+class FakeXBuffer(FakeBuffer):
+    def submit_x_promotion(self, post, video):
+        self.calls += 1
+        if self.timeout:
+            raise c.CloudError('timeout after provider accepted')
+        return {'id': 'x-buffer-new', 'status': 'scheduled', 'dueAt': post['scheduled_at'],
+                'text': c.x_promotion_text(post)}
+
+
 class WitnessS3(AtomicS3):
     def __init__(self):
         super().__init__()
@@ -86,7 +96,8 @@ class WitnessS3(AtomicS3):
 
 class PublisherTests(unittest.TestCase):
     def setUp(self):
-        self.env = patch.dict(os.environ, {'BUFFER_TIKTOK_CHANNEL_ID': 'candy-test'}, clear=False)
+        self.env = patch.dict(os.environ, {'BUFFER_TIKTOK_CHANNEL_ID': 'candy-test',
+            'CANDY_X_PROMOTION_ENABLED': 'false'}, clear=False)
         self.env.start()
         self.addCleanup(self.env.stop)
         self.now = datetime.now(timezone.utc)
@@ -107,6 +118,12 @@ class PublisherTests(unittest.TestCase):
 
     def deliver(self, buffer):
         c.deliver(self.store, buffer, self.post, render_fn=lambda p: 'file', upload_fn=lambda p, f: self.video)
+
+    def test_public_media_check_uses_named_validator_user_agent(self):
+        request = c.public_media_request('https://media.example.test/video.mp4')
+        self.assertEqual('HEAD', request.get_method())
+        self.assertEqual(c.PUBLIC_MEDIA_USER_AGENT, request.get_header('User-agent'))
+        self.assertNotIn('Python-urllib', request.get_header('User-agent'))
 
     def test_missing_state_fails_closed(self):
         with self.assertRaises(c.MissingState):
@@ -184,6 +201,38 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual('SCHEDULED', self.current()['status'])
         self.assertEqual(['buffer-new'], self.current()['buffer_ids'])
         self.assertEqual(1, buffer.calls)
+        self.assertNotIn('x_promo', self.current())
+
+    def test_enabled_x_promotion_records_separate_buffer_id(self):
+        buffer = FakeBuffer()
+        x = FakeXBuffer()
+        with patch.dict(os.environ, {'CANDY_X_PROMOTION_ENABLED': 'true'}):
+            c.deliver(self.store, buffer, self.post, render_fn=lambda p: 'file',
+                      upload_fn=lambda p, f: self.video, x_channel=x)
+        current = self.current()
+        self.assertEqual('SCHEDULED', current['status'])
+        self.assertEqual(['buffer-new'], current['buffer_ids'])
+        self.assertEqual('SCHEDULED', current['x_promo']['status'])
+        self.assertEqual(['x-buffer-new'], current['x_promo']['buffer_ids'])
+        self.assertIn('Trivia Candy Fun', current['x_promo']['text'])
+        self.assertEqual(1, buffer.calls)
+        self.assertEqual(1, x.calls)
+
+    def test_x_timeout_does_not_replay_tiktok_submission(self):
+        buffer = FakeBuffer()
+        x = FakeXBuffer(timeout=True)
+        with patch.dict(os.environ, {'CANDY_X_PROMOTION_ENABLED': 'true'}):
+            with self.assertRaisesRegex(c.CloudError, 'X_SUBMISSION_UNCERTAIN'):
+                c.deliver(self.store, buffer, self.post, render_fn=lambda p: 'file',
+                          upload_fn=lambda p, f: self.video, x_channel=x)
+            with self.assertRaises(c.CloudError):
+                c.deliver(self.store, buffer, self.post, render_fn=lambda p: 'file',
+                          upload_fn=lambda p, f: self.video, x_channel=x)
+        current = self.current()
+        self.assertEqual('SCHEDULED', current['status'])
+        self.assertEqual('UNCERTAIN', current['x_promo']['status'])
+        self.assertEqual(1, buffer.calls)
+        self.assertEqual(1, x.calls)
 
     def test_provider_timeout_never_retries(self):
         buffer = FakeBuffer(timeout=True)
@@ -304,6 +353,27 @@ class PublisherTests(unittest.TestCase):
         with self.assertRaises(c.CloudError):
             c.claim(self.store, self.post, 'owner', self.now)
 
+    def test_exhausted_canary_render_gets_one_evidence_free_recovery(self):
+        def exhaust(s):
+            s.update(mode='canary', canary_id=self.post['id'])
+            s['posts'][self.post['id']].update(status='FAILED_RENDER', render_attempts=3,
+                                               error='PRE_SUBMISSION_FAILED')
+        self.store.change(exhaust)
+        with patch.dict(os.environ, {'CANDY_PUBLISHING_ENABLED': 'false'}):
+            admin.recover_canary_render(self.store, self.post['id'])
+        self.assertEqual(2, self.current()['render_attempts'])
+        self.assertEqual('ONE_RECOVERY_ATTEMPT_AUTHORIZED', self.current()['error'])
+
+    def test_canary_render_recovery_rejects_submission_evidence(self):
+        def exhaust(s):
+            s.update(mode='canary', canary_id=self.post['id'])
+            s['posts'][self.post['id']].update(status='FAILED_RENDER', render_attempts=3,
+                                               error='PRE_SUBMISSION_FAILED', video={'sha256': 'evidence'})
+        self.store.change(exhaust)
+        with patch.dict(os.environ, {'CANDY_PUBLISHING_ENABLED': 'false'}):
+            with self.assertRaisesRegex(c.CloudError, 'SUBMISSION_EVIDENCE'):
+                admin.recover_canary_render(self.store, self.post['id'])
+
     def test_duplicate_content_and_provider_ids_are_rejected(self):
         s = self.store.load()[0]
         duplicate = copy.deepcopy(s['posts'][self.post['id']])
@@ -316,6 +386,70 @@ class PublisherTests(unittest.TestCase):
         s['posts'][self.post['id']]['buffer_ids'] = ['same-id']
         with self.assertRaisesRegex(c.CloudError, 'DUPLICATE_BUFFER_ID_STATE'):
             c.validate_state(s)
+        duplicate['buffer_ids'] = []
+        s['posts'][self.post['id']]['buffer_ids'] = []
+        duplicate['x_promo'] = {'buffer_ids': ['same-x-id']}
+        s['posts'][self.post['id']]['x_promo'] = {'buffer_ids': ['same-x-id']}
+        with self.assertRaisesRegex(c.CloudError, 'DUPLICATE_X_BUFFER_ID_STATE'):
+            c.validate_state(s)
+
+    def test_cover_gate_rejects_pending_or_emoji_visuals(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            asset = root / 'public' / 'visuals' / 'candy-v1' / 'subject.png'
+            asset.parent.mkdir(parents=True)
+            asset.write_bytes(b'approved-image-bytes')
+            sha = c.hashlib.sha256(asset.read_bytes()).hexdigest()
+            manifest = asset.parent / 'manifest.json'
+            covers = asset.parent / 'covers.json'
+            payload = {'visualFamilyId': 'candy-v1', 'reviewStatus': 'pending',
+                'assets': {'visuals/candy-v1/subject.png': {'sha256': sha, 'reviewStatus': 'pending'}}}
+            manifest.write_text(json.dumps(payload), encoding='utf-8')
+            cover = {'visualFamilyId': 'candy-v1', 'posts': {'100': {
+                'heading': 'TEST COVER', 'backgroundImage': 'visuals/candy-v1/subject.png',
+                'usesEmojiFallback': False, 'items': [
+                    {'label': 'ONE', 'subjectImage': 'visuals/candy-v1/subject.png'},
+                    {'label': 'TWO', 'subjectImage': 'visuals/candy-v1/subject.png'},
+                    {'label': 'THREE', 'subjectImage': 'visuals/candy-v1/subject.png'}]}}}
+            covers.write_text(json.dumps(cover), encoding='utf-8')
+            with patch.object(c, 'ROOT', root), patch.object(c, 'VISUAL_MANIFEST', manifest), \
+                 patch.object(c, 'COVER_CATALOG', covers):
+                c.validate_cover(self.post, require_approval=False)
+                with self.assertRaisesRegex(c.CloudError, 'NOT_APPROVED'):
+                    c.validate_cover(self.post, require_approval=True)
+                cover['posts']['100']['usesEmojiFallback'] = True
+                covers.write_text(json.dumps(cover), encoding='utf-8')
+                with self.assertRaisesRegex(c.CloudError, 'EMOJI'):
+                    c.validate_cover(self.post, require_approval=False)
+
+    def test_thumbnail_gate_requires_exact_png_dimensions(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            thumbnail = root / 'out' / 'candy-trivia-day-100-cover.png'
+            thumbnail.parent.mkdir(parents=True)
+            header = bytearray(24)
+            header[:8] = b'\x89PNG\r\n\x1a\n'
+            header[16:20] = (1080).to_bytes(4, 'big')
+            header[20:24] = (1920).to_bytes(4, 'big')
+            thumbnail.write_bytes(header)
+            with patch.object(c, 'ROOT', root):
+                self.assertEqual(thumbnail, c.validate_thumbnail(self.post))
+                thumbnail.unlink()
+                with self.assertRaisesRegex(c.CloudError, 'THUMBNAIL_MISSING'):
+                    c.validate_thumbnail(self.post)
+
+    def test_thumbnail_offset_is_middle_of_two_second_cover(self):
+        self.assertEqual(2, c.COVER_DURATION_SECONDS)
+        self.assertEqual(1000, c.THUMBNAIL_OFFSET_MS)
+
+    def test_own_brand_posts_use_notification_publishing(self):
+        self.assertEqual('own_brand', c.TIKTOK_COMMERCIAL_MODE)
+        self.assertEqual('notification', c.TIKTOK_SCHEDULING_TYPE)
+
+    def test_x_promotion_copy_fits_x_limit(self):
+        text = c.x_promotion_text(self.post)
+        self.assertLessEqual(len(text), 280)
+        self.assertIn(c.DEFAULT_PROMO_APP_URL, text)
 
     def test_content_sync_is_append_only(self):
         added = copy.deepcopy(self.post)

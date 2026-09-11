@@ -16,6 +16,7 @@ on:
           - shadow
           - render-only
           - activate-canary
+          - recover-canary-render
           - canary
           - promote-live
           - refill
@@ -46,6 +47,10 @@ jobs:
       CANDY_PUBLISHING_ENABLED: ${{ vars.CANDY_PUBLISHING_ENABLED || 'false' }}
       BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
       BUFFER_TIKTOK_CHANNEL_ID: ${{ secrets.BUFFER_TIKTOK_CHANNEL_ID }}
+      BUFFER_X_CHANNEL_ID: ${{ secrets.BUFFER_X_CHANNEL_ID }}
+      CANDY_X_PROMOTION_ENABLED: ${{ vars.CANDY_X_PROMOTION_ENABLED || 'false' }}
+      CANDY_PROMO_APP_URL: ${{ vars.CANDY_PROMO_APP_URL || 'https://apps.apple.com/us/app/trivia-candy-fun/id6768475077' }}
+      CANDY_PROMO_WEBSITE_URL: ${{ vars.CANDY_PROMO_WEBSITE_URL || '' }}
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -89,10 +94,13 @@ jobs:
         shell: bash
         run: |
           case "$MODE" in
-            import-history|activate-canary|promote-live)
+            import-history|activate-canary|recover-canary-render|promote-live)
               args=("$MODE")
               if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
               python candy_cloud_admin.py "${args[@]}"
+              ;;
+            analytics)
+              python candy_metrics.py
               ;;
             *)
               args=(--mode "$MODE")
@@ -100,13 +108,9 @@ jobs:
               python candy_cloud.py "${args[@]}"
               ;;
           esac
-      - name: Collect available daily analytics
-        if: github.event_name == 'schedule'
-        shell: bash
-        run: |
-          if [[ "$(date -u +%H)" == "08" ]]; then
-            python candy_cloud.py --mode analytics
-          fi
+      - name: Collect due 1h 24h and 72h analytics checkpoints
+        if: github.event_name == 'schedule' && env.MODE != 'analytics'
+        run: python candy_metrics.py
       - name: Failure guidance
         if: failure()
         run: |

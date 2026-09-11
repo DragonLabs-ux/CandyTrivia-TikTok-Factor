@@ -10,6 +10,8 @@ Rules:
 - Uses scheduledAt already stored in examples\auto\post-###.json.
 - Never rewrites schedule times.
 - Uses today's remaining slots, otherwise the next campaign date.
+- Pulls the current main branch before publishing so renderer, analytics, and
+  hook experiment code stay aligned with the reviewed campaign.
 - Writes .private\candy-publisher-state.json before calling Buffer.
 - SENT and PUBLISHING/UNCERTAIN posts are never automatically retried.
 """
@@ -30,7 +32,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 PROJECT_DEFAULT = Path(r"C:\Users\perry\AI\ChatGPT\CandyTrivia-TikTok-Factor")
-BRANCH = "feature/three-post-autopilot"
+BRANCH = "main"
 TZ = ZoneInfo("America/Phoenix")
 STATE_REL = Path(".private") / "candy-publisher-state.json"
 POST_RE = re.compile(r"post-(\d{3})\.json$", re.I)
@@ -115,7 +117,7 @@ def video_sha(path: Path) -> str:
 def load_posts(project: Path) -> list[dict[str, Any]]:
     folder = project / "examples" / "auto"
     if not folder.exists():
-        raise SystemExit("Missing examples\\auto. Run the v2.7 generator/audit first.")
+        raise SystemExit("Missing examples\\auto. Pull main and run the campaign audit first.")
 
     posts = []
     for path in sorted(folder.glob("post-*.json")):
@@ -268,6 +270,7 @@ def main() -> None:
         run(["git", "checkout", BRANCH], project, "Checkout branch")
         run(["git", "pull", "--ff-only", "origin", BRANCH], project, "Pull GitHub")
         run([npm(), "run", "typecheck"], project, "TypeScript check")
+        run([npm(), "run", "audit-content"], project, "Campaign content audit")
 
     posts = load_posts(project)
     chosen = target_date(posts, args.date, now)

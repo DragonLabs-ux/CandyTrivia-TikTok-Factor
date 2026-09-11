@@ -2,11 +2,14 @@ import React from 'react';
 import {Audio} from '@remotion/media';
 import {AbsoluteFill, Composition, Sequence, registerRoot, staticFile} from 'remotion';
 import {normalizeTemplate, type VisualTemplate} from './candy-theme.js';
+import {hookExperimentVariant} from './hook-experiment.js';
 import {
   AnswerRevealScene,
   ChallengeScene,
+  CoverScene,
   CtaScene,
   QuestionScene,
+  type CoverItem,
   type SceneCommon,
 } from './candy-visual-system.js';
 import {FPS, REVIEW_FRAMES, TIMELINE, TOTAL_FRAMES} from './timeline.js';
@@ -37,6 +40,10 @@ export type CandyTriviaVideoProps = {
   q1Image?: string;
   q2Image?: string;
   q3Image?: string;
+  coverHeading?: string;
+  coverBackgroundImage?: string;
+  coverItems?: CoverItem[];
+  coverUsesEmojiFallback?: boolean;
   withVoiceover?: boolean;
 };
 
@@ -121,12 +128,40 @@ export const CandyTriviaVideo: React.FC<CandyTriviaVideoProps> = (props) => {
   const initialScore = Math.max(0, Math.min(3, props.score ?? 0));
   const q1Answers = answersFor(props.q1Answers ?? props.answers, props.a1);
   const q2Answers = answersFor(props.q2Answers, props.a2);
+  const hookVariant = hookExperimentVariant(props.day);
 
   return (
     <AbsoluteFill>
-      <Sequence from={sec(TIMELINE.q1.start)} durationInFrames={sec(TIMELINE.q1.duration)} name="Question 1">
-        <QuestionScene {...commonFor(props, 0, props.q1Image)} durationInFrames={sec(TIMELINE.q1.duration)} hook={hook} question={props.question ?? props.q1} answers={q1Answers} questionNumber={1} progress={1} score={initialScore} showHook countdownStartFrame={sec(COUNTDOWN_OFFSET)} />
-      </Sequence>
+      {hookVariant === 'question-first-hook' ? (
+        <Sequence from={sec(TIMELINE.cover.start)} durationInFrames={sec(TIMELINE.a1.start)} name="Question-first hook experiment">
+          <QuestionScene
+            {...commonFor(props, 0, props.q1Image)}
+            durationInFrames={sec(TIMELINE.a1.start)}
+            hook={hook}
+            question={props.question ?? props.q1}
+            answers={q1Answers}
+            questionNumber={1}
+            progress={1}
+            score={initialScore}
+            showHook
+            countdownStartFrame={sec(TIMELINE.q1.start + COUNTDOWN_OFFSET)}
+          />
+        </Sequence>
+      ) : (
+        <>
+          <Sequence from={sec(TIMELINE.cover.start)} durationInFrames={sec(TIMELINE.cover.duration)} name="Dedicated cover">
+            <CoverScene
+              heading={props.coverHeading ?? 'CANDY TRIVIA CHALLENGE'}
+              backgroundImage={props.coverBackgroundImage ?? 'art/candy-kingdom.svg'}
+              items={props.coverItems ?? []}
+              hook={hook}
+            />
+          </Sequence>
+          <Sequence from={sec(TIMELINE.q1.start)} durationInFrames={sec(TIMELINE.q1.duration)} name="Question 1">
+            <QuestionScene {...commonFor(props, 0, props.q1Image)} durationInFrames={sec(TIMELINE.q1.duration)} hook={hook} question={props.question ?? props.q1} answers={q1Answers} questionNumber={1} progress={1} score={initialScore} showHook countdownStartFrame={sec(COUNTDOWN_OFFSET)} />
+          </Sequence>
+        </>
+      )}
       <Sequence from={sec(TIMELINE.a1.start)} durationInFrames={sec(TIMELINE.a1.duration)} name="Answer 1 reveal">
         <AnswerRevealScene {...commonFor(props, 0, props.q1Image)} durationInFrames={sec(TIMELINE.a1.duration)} question={props.q1} answers={q1Answers} correctAnswer={props.correctAnswer ?? props.a1} questionNumber={1} progress={1} score={Math.min(3, initialScore + 1)} />
       </Sequence>
@@ -158,21 +193,24 @@ export const CandyTriviaReview: React.FC<CandyTriviaVideoProps> = (props) => {
   const score = Math.max(0, Math.min(3, props.score ?? 0));
   return (
     <AbsoluteFill>
-      <Sequence from={0} durationInFrames={150} name="Hook and question">
+      <Sequence from={0} durationInFrames={60} name="Dedicated cover">
+        <CoverScene heading={props.coverHeading ?? 'CANDY TRIVIA CHALLENGE'} backgroundImage={props.coverBackgroundImage ?? 'art/candy-kingdom.svg'} items={props.coverItems ?? []} hook={hook} />
+      </Sequence>
+      <Sequence from={60} durationInFrames={150} name="Hook and question">
         <QuestionScene {...commonFor(props, 0, props.q1Image)} durationInFrames={150} hook={hook} question={props.question ?? props.q1} answers={q1Answers} questionNumber={1} progress={1} score={score} showHook countdownStartFrame={60} />
       </Sequence>
-      <Sequence from={150} durationInFrames={78} name="Answer reveal">
+      <Sequence from={210} durationInFrames={78} name="Answer reveal">
         <AnswerRevealScene {...commonFor(props, 0, props.q1Image)} durationInFrames={78} question={props.q1} answers={q1Answers} correctAnswer={props.correctAnswer ?? props.a1} questionNumber={1} progress={1} score={Math.min(3, score + 1)} />
       </Sequence>
-      <Sequence from={228} durationInFrames={78} name="Final challenge">
+      <Sequence from={288} durationInFrames={78} name="Final challenge">
         <ChallengeScene {...commonFor(props, 2, props.q3Image)} durationInFrames={78} question={props.q3} hook="ONE MORE FOR THE CROWN" questionNumber={3} progress={3} score={Math.min(3, score + 2)} lockIn />
       </Sequence>
-      <Sequence from={306} durationInFrames={96} name="CTA">
+      <Sequence from={366} durationInFrames={96} name="CTA">
         <CtaScene {...commonFor(props, 0)} durationInFrames={96} cta={cta} score={Math.min(3, score + 2)} />
       </Sequence>
-      <Sequence from={0} layout="none"><Audio src={staticFile('audio/premium-question.wav')} volume={0.14} /></Sequence>
-      <Sequence from={150} layout="none"><Audio src={staticFile('audio/premium-ding.wav')} volume={0.2} /></Sequence>
-      <Sequence from={306} layout="none"><Audio src={staticFile('audio/premium-final.wav')} volume={0.17} /></Sequence>
+      <Sequence from={60} layout="none"><Audio src={staticFile('audio/premium-question.wav')} volume={0.14} /></Sequence>
+      <Sequence from={210} layout="none"><Audio src={staticFile('audio/premium-ding.wav')} volume={0.2} /></Sequence>
+      <Sequence from={366} layout="none"><Audio src={staticFile('audio/premium-final.wav')} volume={0.17} /></Sequence>
     </AbsoluteFill>
   );
 };
@@ -194,6 +232,10 @@ const defaultProps: CandyTriviaVideoProps = {
   mascotVariant: 'crown-host',
   highContrast: false,
   colorBlindMode: true,
+  coverHeading: 'CANDY TRIVIA CHALLENGE',
+  coverBackgroundImage: 'art/candy-kingdom.svg',
+  coverItems: [],
+  coverUsesEmojiFallback: true,
   withVoiceover: false,
 };
 

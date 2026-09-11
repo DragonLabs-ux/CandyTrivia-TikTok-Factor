@@ -27,10 +27,23 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parent
 TZ = ZoneInfo('America/Phoenix')
 MEDIA_BUCKET = 'candy-trivia-media'
+PUBLIC_MEDIA_USER_AGENT = 'Mozilla/5.0 (compatible; CandyTriviaMediaValidator/1.0; +https://dragonlabs.app)'
 STATE_BUCKET = 'candy-trivia-control'
 STATE_KEY = 'publisher/v1/state.json'
 CAMPAIGN = 'candy-premium-2026-09'
 DELIVERY_STATES = {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED', 'SENT', 'HISTORICAL', 'BLOCKED'}
+VISUAL_ROOT = ROOT / 'public' / 'visuals' / 'candy-v1'
+VISUAL_MANIFEST = VISUAL_ROOT / 'manifest.json'
+COVER_CATALOG = VISUAL_ROOT / 'covers.json'
+COVER_DURATION_SECONDS = 2
+THUMBNAIL_OFFSET_MS = 1000
+TIKTOK_COMMERCIAL_MODE = 'own_brand'
+TIKTOK_SCHEDULING_TYPE = 'notification'
+DEFAULT_PROMO_APP_URL = 'https://apps.apple.com/us/app/trivia-candy-fun/id6768475077'
+
+
+def public_media_request(url):
+    return urllib.request.Request(url, method='HEAD', headers={'User-Agent': PUBLIC_MEDIA_USER_AGENT})
 
 
 class CloudError(RuntimeError):
@@ -69,6 +82,10 @@ def required(name):
     if not value:
         raise CloudError('MISSING_' + name)
     return value
+
+
+def enabled(name):
+    return os.environ.get(name, '').strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
 def load_local_env():
@@ -115,6 +132,11 @@ def validate_state(s):
             if bid in buffer_ids and buffer_ids[bid] != key:
                 raise CloudError('DUPLICATE_BUFFER_ID_STATE')
             buffer_ids[bid] = key
+        for bid in row.get('x_promo', {}).get('buffer_ids', []):
+            x_key = 'x:' + bid
+            if x_key in buffer_ids and buffer_ids[x_key] != key:
+                raise CloudError('DUPLICATE_X_BUFFER_ID_STATE')
+            buffer_ids[x_key] = key
 
 
 class R2State:
@@ -306,8 +328,11 @@ def record_result(store, post_id, owner, result=None):
 
 
 class Buffer:
-    def __init__(self):
-        self.channel = required('BUFFER_TIKTOK_CHANNEL_ID')
+    def __init__(self, channel_env='BUFFER_TIKTOK_CHANNEL_ID', services=('tiktok',), mismatch='NOT_CANDY_TIKTOK_CHANNEL'):
+        self.channel_env = channel_env
+        self.channel = required(channel_env)
+        self.services = {service.lower() for service in services}
+        self.mismatch = mismatch
 
     def query(self, query, variables=None):
         request = urllib.request.Request('https://api.buffer.com',
@@ -318,6 +343,8 @@ class Buffer:
                 payload = json.load(r)
         except Exception:
             raise CloudError('BUFFER_REQUEST_FAILED') from None
+        if not isinstance(payload, dict):
+            raise CloudError('BUFFER_BAD_RESPONSE')
         if payload.get('errors'):
             if any('post not found' in str(e.get('message', '')).lower() for e in payload['errors']):
                 raise NotFound('BUFFER_POST_NOT_FOUND')
@@ -328,8 +355,9 @@ class Buffer:
 
     def channel_check(self):
         data = self.query('query($id:ChannelId!){channel(input:{id:$id}){id name service}}', {'id': self.channel})
-        if data['channel']['service'] != 'tiktok' or data['channel']['id'] != self.channel:
-            raise CloudError('NOT_CANDY_TIKTOK_CHANNEL')
+        service = str(data['channel']['service']).lower()
+        if service not in self.services or data['channel']['id'] != self.channel:
+            raise CloudError(self.mismatch)
         return data['channel']
 
     def get(self, bid, metrics=False):
@@ -357,14 +385,26 @@ class Buffer:
         return list({p['id']: p for p in found if p['channelId'] == self.channel}.values())
 
     def submit(self, post, video):
+        if TIKTOK_COMMERCIAL_MODE == 'own_brand' and TIKTOK_SCHEDULING_TYPE != 'notification':
+            raise CloudError('OWN_BRAND_DISCLOSURE_REQUIRES_NOTIFICATION_PUBLISHING')
         value = {'channelId': self.channel, 'text': post['data']['caption'], 'needsApproval': False,
-            'schedulingType': 'automatic', 'mode': 'customScheduled', 'dueAt': post['scheduled_at'],
+            'schedulingType': TIKTOK_SCHEDULING_TYPE, 'mode': 'customScheduled', 'dueAt': post['scheduled_at'],
             'aiAssisted': True, 'metadata': {'tiktok': {'isAiGenerated': True}},
-            'assets': [{'video': {'url': video['url'], 'metadata': {'thumbnailOffset': 2000}}}]}
+            'assets': [{'video': {'url': video['url'], 'metadata': {'thumbnailOffset': THUMBNAIL_OFFSET_MS}}}]}
         result = self.query('mutation($input:CreatePostInput!){createPost(input:$input){__typename ... on PostActionSuccess{post{id dueAt sentAt status}} ... on MutationError{message}}}', {'input': value})['createPost']
         if result.get('__typename') != 'PostActionSuccess' or not result.get('post', {}).get('id'):
             raise CloudError('BUFFER_SUBMISSION_NOT_CONFIRMED')
         return result['post']
+
+    def submit_x_promotion(self, post, video):
+        text = x_promotion_text(post)
+        value = {'channelId': self.channel, 'text': text, 'needsApproval': False,
+            'schedulingType': 'automatic', 'mode': 'customScheduled', 'dueAt': post['scheduled_at'],
+            'assets': [{'video': {'url': video['url']}}]}
+        result = self.query('mutation($input:CreatePostInput!){createPost(input:$input){__typename ... on PostActionSuccess{post{id dueAt sentAt status}} ... on MutationError{message}}}', {'input': value})['createPost']
+        if result.get('__typename') != 'PostActionSuccess' or not result.get('post', {}).get('id'):
+            raise CloudError('X_BUFFER_SUBMISSION_NOT_CONFIRMED')
+        return {**result['post'], 'text': text}
 
 
 def reconcile(store, buffer):
@@ -414,8 +454,173 @@ def reconcile(store, buffer):
     store.change(change)
 
 
-def render(post):
+def x_promotion_enabled():
+    return enabled('CANDY_X_PROMOTION_ENABLED')
+
+
+def x_buffer():
+    return Buffer('BUFFER_X_CHANNEL_ID', ('twitter', 'x'), 'NOT_CANDY_X_CHANNEL')
+
+
+def x_promotion_text(post):
+    app = os.environ.get('CANDY_PROMO_APP_URL', DEFAULT_PROMO_APP_URL).strip() or DEFAULT_PROMO_APP_URL
+    website = os.environ.get('CANDY_PROMO_WEBSITE_URL', '').strip()
+    hook = str(post['data'].get('hook') or 'Can you get 3/3?').strip().rstrip('?!')
+    lines = [f'{hook}? Play Trivia Candy Fun.', app]
+    if website:
+        lines.append('More games: ' + website)
+    lines.append('#TriviaCandyFun #Trivia #MobileGames')
+    text = '\n'.join(lines)
+    if len(text) <= 280:
+        return text
+    text = f'Play Trivia Candy Fun: {app}\n#TriviaCandyFun #Trivia'
+    if len(text) > 280:
+        raise CloudError('X_PROMO_TEXT_TOO_LONG')
+    return text
+
+
+def x_before_submit(store, post, owner, video, now):
+    def change(s):
+        p = s['posts'][post['id']]
+        promo = p.setdefault('x_promo', {'buffer_ids': [], 'attempts': []})
+        if promo.get('status') in {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED', 'SENT'}:
+            raise CloudError('X_PROMOTION_ALREADY_SUBMITTED')
+        promo.update(status='SUBMITTING', owner=owner, video=video, submitted_at=now.isoformat(),
+                     text=x_promotion_text(post))
+        promo.setdefault('attempts', []).append({'id': owner, 'at': now.isoformat(),
+            'status': 'SUBMITTING', 'video_hash': video['sha256']})
+        event(s, 'x_submitting', post['id'])
+    store.change(change)
+
+
+def x_record_result(store, post_id, owner, result=None):
+    def change(s):
+        promo = s['posts'][post_id].setdefault('x_promo', {'buffer_ids': [], 'attempts': []})
+        if promo.get('owner') != owner or promo.get('status') not in {'SUBMITTING', 'UNCERTAIN'}:
+            raise CloudError('X_SUBMISSION_STATE_CHANGED')
+        if result:
+            promo.setdefault('buffer_ids', [])
+            if result['id'] not in promo['buffer_ids']:
+                promo['buffer_ids'].append(result['id'])
+            status = 'SENT' if result.get('status') == 'sent' else 'SCHEDULED' if result.get('status') == 'scheduled' else 'BLOCKED'
+            promo.update(status=status, buffer_post_id=result['id'], due_at=result.get('dueAt'),
+                         sent_at=result.get('sentAt'), text=result.get('text', promo.get('text')))
+        else:
+            promo['status'] = 'UNCERTAIN'
+        promo.setdefault('attempts', [{'id': owner, 'status': 'SUBMITTING'}])[-1]['status'] = promo['status']
+        event(s, 'x_' + promo['status'].lower(), post_id)
+    store.change(change)
+
+
+def reconcile_x(store, buffer):
+    state, _ = store.load()
+    updates = {}
+    for key, p in state['posts'].items():
+        promo = p.get('x_promo') or {}
+        if promo.get('status') not in {'SCHEDULED', 'SUBMITTING', 'UNCERTAIN', 'BLOCKED'}:
+            continue
+        seen = []
+        for bid in promo.get('buffer_ids', []):
+            try:
+                seen.append(buffer.get(bid))
+            except NotFound:
+                seen.append({'id': bid, 'status': 'not_found'})
+        updates[key] = seen
+    def change(s):
+        for key, seen in updates.items():
+            promo = s['posts'][key].setdefault('x_promo', {'buffer_ids': [], 'attempts': []})
+            promo['observations'] = [{k: row.get(k) for k in ('id', 'status', 'dueAt', 'sentAt', 'externalLink')} for row in seen]
+            promo['reconciled_at'] = now_iso()
+            sent = [r for r in seen if r['status'] == 'sent']
+            scheduled = [r for r in seen if r['status'] == 'scheduled']
+            if sent:
+                promo.update(status='SENT', sent_at=sent[0].get('sentAt'), buffer_post_id=sent[0]['id'])
+            elif promo.get('status') == 'SENT':
+                continue
+            elif len(scheduled) == 1:
+                promo.update(status='SCHEDULED', buffer_post_id=scheduled[0]['id'], due_at=scheduled[0].get('dueAt'))
+            elif len(scheduled) > 1:
+                promo.update(status='BLOCKED', error='MULTIPLE_X_SCHEDULED_COPIES')
+            elif promo.get('status') in {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED'}:
+                promo.update(status='UNCERTAIN', error='X_RECONCILIATION_REQUIRED')
+        s['last_x_reconcile'] = now_iso()
+    store.change(change)
+
+
+def schedule_x_promotion(store, buffer, post, video):
+    owner = uuid.uuid4().hex
+    text = x_promotion_text(post)
+    live = buffer.list_posts()
+    target_day = dt(post['scheduled_at']).astimezone(TZ).date()
+    same_day = [p for p in live if p.get('dueAt') and dt(p['dueAt']).astimezone(TZ).date() == target_day
+                and p['status'] in {'sent', 'scheduled', 'pending', 'sending'}]
+    if any(p.get('text') == text for p in same_day):
+        raise CloudError('X_BUFFER_QUEUE_CONFLICT')
+    x_before_submit(store, post, owner, video, datetime.now(timezone.utc))
+    try:
+        result = buffer.submit_x_promotion(post, video)
+        x_record_result(store, post['id'], owner, result)
+    except Exception:
+        try:
+            x_record_result(store, post['id'], owner)
+        except Exception:
+            pass
+        raise CloudError('X_SUBMISSION_UNCERTAIN_CHECK_BUFFER') from None
+
+
+def validate_cover(post, require_approval=True):
+    try:
+        manifest = json.loads(VISUAL_MANIFEST.read_text(encoding='utf-8'))
+        catalog = json.loads(COVER_CATALOG.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        raise CloudError('THUMBNAIL_MANIFEST_MISSING_OR_INVALID') from None
+    cover = catalog.get('posts', {}).get(f"{post['number']:03d}")
+    if not cover:
+        raise CloudError('THUMBNAIL_MISSING')
+    if cover.get('usesEmojiFallback') is not False:
+        raise CloudError('EMOJI_COVER_FALLBACK_FORBIDDEN')
+    if not isinstance(cover.get('items'), list) or len(cover['items']) != 3:
+        raise CloudError('COVER_SUBJECT_IMAGES_REQUIRED')
+    if manifest.get('visualFamilyId') != catalog.get('visualFamilyId'):
+        raise CloudError('VISUAL_FAMILY_MANIFEST_MISMATCH')
+    if require_approval and manifest.get('reviewStatus') != 'approved':
+        raise CloudError('VISUAL_FAMILY_NOT_APPROVED')
+    references = [cover.get('backgroundImage'), *(item.get('subjectImage') for item in cover['items'])]
+    public = (ROOT / 'public').resolve()
+    for relative in references:
+        if not isinstance(relative, str) or not relative.startswith('visuals/candy-v1/') or '..' in relative:
+            raise CloudError('INVALID_COVER_ASSET_PATH')
+        file = (public / Path(relative)).resolve()
+        try:
+            file.relative_to(public)
+        except ValueError:
+            raise CloudError('INVALID_COVER_ASSET_PATH') from None
+        record = manifest.get('assets', {}).get(relative)
+        if not record or not file.is_file():
+            raise CloudError('COVER_ASSET_MISSING')
+        if hashlib.sha256(file.read_bytes()).hexdigest() != record.get('sha256'):
+            raise CloudError('COVER_ASSET_HASH_MISMATCH')
+        if require_approval and record.get('reviewStatus') != 'approved':
+            raise CloudError('COVER_ASSET_NOT_APPROVED')
+    return cover
+
+
+def validate_thumbnail(post):
+    file = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}-cover.png"
+    try:
+        header = file.read_bytes()[:24]
+    except OSError:
+        raise CloudError('THUMBNAIL_MISSING') from None
+    if len(header) < 24 or header[:8] != b'\x89PNG\r\n\x1a\n':
+        raise CloudError('THUMBNAIL_INVALID')
+    if int.from_bytes(header[16:20], 'big') != 1080 or int.from_bytes(header[20:24], 'big') != 1920:
+        raise CloudError('THUMBNAIL_DIMENSIONS_INVALID')
+    return file
+
+
+def render(post, require_visual_approval=True):
     import candy_production_validation as validation
+    validate_cover(post, require_visual_approval)
     env = os.environ.copy()
     env.update(OPENAI_IMAGES_ENABLED='0', TTS_ENABLED='1', TTS_VOICE='en-US-AvaNeural',
                TTS_RATE='+8%', TTS_PITCH='+0Hz', CANDY_PUBLISHING_DISABLED='1')
@@ -426,6 +631,7 @@ def render(post):
     if result.returncode:
         raise CloudError('RENDER_FAILED')
     file = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}.mp4"
+    validate_thumbnail(post)
     validation.validate_media(post['data'].get('visualTemplate', 'A'), file, file.with_suffix('.srt'))
     validation.validate_narration(post['number'])
     return file
@@ -454,7 +660,7 @@ def upload(post, file):
         raise CloudError('HTTPS_MEDIA_REQUIRED')
     url = base + '/' + key
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, method='HEAD'), timeout=30) as r:
+        with urllib.request.urlopen(public_media_request(url), timeout=30) as r:
             if r.status != 200 or r.headers.get_content_type() != 'video/mp4' or int(r.headers.get('Content-Length', 0)) != file.stat().st_size:
                 raise CloudError('PUBLIC_MEDIA_INVALID')
     except Exception:
@@ -465,7 +671,7 @@ def upload(post, file):
 def render_key(post):
     # Include every renderer/audio/font/art input. Schedules don't affect pixels.
     files = [ROOT / 'package-lock.json']
-    for folder in ('src', 'scripts', 'public/art'):
+    for folder in ('src', 'scripts', 'public/art', 'public/visuals'):
         files.extend(p for p in (ROOT / folder).rglob('*') if p.is_file())
     renderer = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(files)}
     content = {k: v for k, v in post['data'].items() if k not in {'scheduledAt', 'meta'}}
@@ -482,7 +688,7 @@ def cached_media(store, post):
         r = s3_client().head_object(Bucket=MEDIA_BUCKET, Key=video['key'])
         if r['ContentLength'] != video['bytes'] or r.get('Metadata', {}).get('sha256') != video['sha256']:
             raise CloudError('CACHED_MEDIA_MISMATCH')
-        with urllib.request.urlopen(urllib.request.Request(video['url'], method='HEAD'), timeout=30) as public:
+        with urllib.request.urlopen(public_media_request(video['url']), timeout=30) as public:
             if public.status != 200 or public.headers.get_content_type() != 'video/mp4' or int(public.headers.get('Content-Length', 0)) != video['bytes']:
                 raise CloudError('CACHED_MEDIA_INVALID')
         return video
@@ -490,12 +696,14 @@ def cached_media(store, post):
         raise CloudError('CACHED_MEDIA_VERIFICATION_FAILED') from None
 
 
-def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=cached_media):
+def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=cached_media, x_channel=None):
     owner = uuid.uuid4().hex
     claim(store, post, owner, datetime.now(timezone.utc))
+    stage = 'media'
     try:
         video = cache_fn(store, post) or upload_fn(post, render_fn(post))
         video['render_key'] = render_key(post)
+        stage = 'cache_record'
         def remember(s):
             p = s['posts'][post['id']]
             if p.get('owner') != owner or p['status'] != 'RENDERING':
@@ -504,20 +712,25 @@ def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=ca
         store.change(remember)
         # Refresh external queue immediately before the irreversible call. Any
         # same-caption/same-slot item or exhausted daily count blocks submission.
+        stage = 'buffer_queue_read'
         live = buffer.list_posts()
+        stage = 'buffer_queue_check'
         target_day = dt(post['scheduled_at']).astimezone(TZ).date()
         same_day = [p for p in live if p.get('dueAt') and dt(p['dueAt']).astimezone(TZ).date() == target_day
                     and p['status'] in {'sent', 'scheduled', 'pending', 'sending'}]
         if len(same_day) >= 3 or any(p.get('text') == post['data']['caption'] for p in same_day):
             raise CloudError('BUFFER_QUEUE_CONFLICT')
+        stage = 'submission_intent'
         before_submit(store, post, owner, video, datetime.now(timezone.utc))
-    except Exception:
+    except Exception as exc:
         def failed(s):
             p = s['posts'][post['id']]
             if p['status'] == 'RENDERING' and p.get('owner') == owner:
                 p.update(status='FAILED_RENDER', error='PRE_SUBMISSION_FAILED')
         store.change(failed)
-        raise
+        if isinstance(exc, CloudError):
+            raise
+        raise CloudError('PRE_SUBMISSION_' + stage.upper() + '_FAILED') from None
     try:
         result = buffer.submit(post, video)  # Exactly one call, no retry wrapper.
         record_result(store, post['id'], owner, result)
@@ -527,6 +740,8 @@ def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=ca
         except Exception:
             pass  # Durable SUBMITTING already prevents retries if R2 is down.
         raise CloudError('SUBMISSION_UNCERTAIN_CHECK_BUFFER') from None
+    if x_promotion_enabled():
+        schedule_x_promotion(store, x_channel or x_buffer(), post, video)
 
 
 def analytics(store, buffer):
@@ -557,11 +772,15 @@ def report(state, posts, planned=None):
     now = datetime.now(timezone.utc)
     future_days = {dt(p['scheduled_at']).astimezone(TZ).date() for p in state['posts'].values()
                    if dt(p['scheduled_at']) > now and p['status'] in {'APPROVED', 'SCHEDULED'}}
+    x_statuses = Counter((p.get('x_promo') or {}).get('status') for p in state['posts'].values()
+                         if (p.get('x_promo') or {}).get('status'))
     value = {'mode': state.get('mode'), 'paused': state.get('paused'),
         'statuses': dict(Counter(p['status'] for p in state['posts'].values())),
+        'x_promo_enabled': x_promotion_enabled(), 'x_promo_statuses': dict(x_statuses),
         'future_content_days': len(future_days), 'content_low': len(future_days) < 7,
         'would_process': [p['id'] for p in planned or []],
-        'attention': [p['id'] for p in state['posts'].values() if p['status'] in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}],
+        'attention': [p['id'] for p in state['posts'].values() if p['status'] in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}
+                      or (p.get('x_promo') or {}).get('status') in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}],
         'local_publisher_disabled': state.get('local_disabled', False)}
     print(json.dumps(value, indent=2))
     if path := os.environ.get('GITHUB_STEP_SUMMARY'):
@@ -582,7 +801,7 @@ def main(argv=None):
     if args.mode == 'render-only':
         if args.post not in posts:
             raise CloudError('EXACT_POST_REQUIRED')
-        render(posts[args.post])
+        render(posts[args.post], require_visual_approval=False)
         print('Production render and media/narration checks passed; nothing uploaded or submitted.')
         return 0
     store = R2State()
@@ -597,6 +816,11 @@ def main(argv=None):
     buffer = Buffer()
     buffer.channel_check()
     reconcile(store, buffer)
+    x_channel = None
+    if x_promotion_enabled():
+        x_channel = x_buffer()
+        x_channel.channel_check()
+        reconcile_x(store, x_channel)
     state, _ = store.load()
     planned = candidates(state, posts, datetime.now(timezone.utc))
     if args.mode == 'shadow':
@@ -623,7 +847,7 @@ def main(argv=None):
             raise CloudError('LIVE_MODE_NOT_ACTIVATED')
         for post in planned[:capacity]:
             print('Processing ' + post['id'], flush=True)
-            deliver(store, buffer, post)
+            deliver(store, buffer, post, x_channel=x_channel)
     state, _ = store.load()
     value = report(state, posts, planned)
     return 2 if value['attention'] else 0

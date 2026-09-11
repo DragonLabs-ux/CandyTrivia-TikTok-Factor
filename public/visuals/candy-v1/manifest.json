@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "visualFamilyId": "candy-v1",
+  "promptVersion": "premium-candy-2026-09-04",
+  "generator": "Codex built-in image generation",
+  "requestedQuality": "premium final",
+  "cropRule": "center crop without aspect-ratio distortion",
+  "creationRun": "codex-visual-upgrade-2026-09-04",
+  "reviewStatus": "approved",
+  "assets": {
+    "visuals/candy-v1/backgrounds/creatures.png": {"kind": "background", "width": 1080, "height": 1920, "sha256": "7da14eb6442a06769990b17324387a7ea2476c06f91741684ff960b7376b34bc", "reviewStatus": "approved"},
+    "visuals/candy-v1/backgrounds/science.png": {"kind": "background", "width": 1080, "height": 1920, "sha256": "4871b7330054df344721c4dc74a5eac08b4487747a369ba6a90cb8c0821fd325", "reviewStatus": "approved"},
+    "visuals/candy-v1/backgrounds/world.png": {"kind": "background", "width": 1080, "height": 1920, "sha256": "3d9c804dc1cfca674032dbb07eadf5560ad184448f37dd39cd237dffa9250716", "reviewStatus": "approved"},
+    "visuals/candy-v1/subjects/animal.png": {"kind": "subject", "width": 640, "height": 640, "sha256": "10973506727c4a98d702f56d2053c47732002e3ce27bcdf1b1e2d6c78389f33f", "reviewStatus": "approved"},
+    "visuals/candy-v1/subjects/candy.png": {"kind": "subject", "width": 640, "height": 640, "sha256": "49997de58b5a40ce32a15feae1e6306ba018fe4f786766c5978785f9a3871a28", "reviewStatus": "approved"},
+    "visuals/candy-v1/subjects/character.png": {"kind": "subject", "width": 640, "height": 640, "sha256": "9cf2a49a73c2cf750ca106290b752a43e38f7e55e65213eec5002a941963359a", "reviewStatus": "approved"},
+    "visuals/candy-v1/subjects/delicious.png": {"kind": "subject", "width": 640, "height": 640, "sha256": "e45abc27fc989e9c8a8fe13e9cca84e9ce9b022d8d33eba8f9c1b7bc27325a52", "reviewStatus": "approved"},
+    "visuals/candy-v1/subjects/fun.png": {"kind": "subject", "width": 640, "height": 640, "sha256": "3b64c33c2da36be44438ac509e652c538cbe0a674e4d565ecdddfdd39da78a18", "reviewStatus": "approved"},
+    "visuals/candy-v1/subjects/math.png": {"kind": "subject", "width": 640, "height": 640, "sha256": "9a93d8f04df5ad2d0fa3bda8e304228e8e8703d50f6c93f3c9b09c95e517da51", "reviewStatus": "approved"},
+    "visuals/candy-v1/subjects/place.png": {"kind": "subject", "width": 640, "height": 640, "sha256": "a136c730ac99fbbb7be564a25b6f85d3397d33a7dae08892bfebb8ac1f749d7f", "reviewStatus": "approved"}
+  }
+}

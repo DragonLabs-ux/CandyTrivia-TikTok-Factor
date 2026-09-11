@@ -8,6 +8,7 @@
     "render": "node --import ./scripts/remotion-network-fix.mjs --import tsx src/cli.ts render",
     "render-local": "node --import ./scripts/remotion-network-fix.mjs --import tsx src/cli.ts render-local",
     "render-previews": "node --import ./scripts/remotion-network-fix.mjs --import tsx src/cli.ts render-previews",
+    "render-covers": "node --import ./scripts/remotion-network-fix.mjs --import tsx src/cli.ts render-covers",
     "publish": "node --import ./scripts/remotion-network-fix.mjs --import tsx src/cli.ts publish",
     "analytics": "node --import ./scripts/remotion-network-fix.mjs --import tsx src/cli.ts analytics",
     "comments": "node --import ./scripts/remotion-network-fix.mjs --import tsx src/cli.ts comments",
