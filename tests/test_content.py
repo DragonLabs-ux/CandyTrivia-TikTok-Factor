@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import candy_content as content
@@ -47,6 +48,14 @@ class ContentVerificationTests(unittest.TestCase):
         with patch.object(content, 'request_json', return_value=checks):
             with self.assertRaisesRegex(CloudError, 'QUESTION_ANSWER_VERIFICATION_FAILED'):
                 content.verify_question_answers(self.facts)
+
+    def test_weekly_slots_match_candy_posting_schedule(self):
+        self.assertEqual(((9, 'A'), (15, 'A'), (19, 'B')), content.SLOTS)
+
+    def test_weekly_workflow_renders_real_campaign_post_id(self):
+        workflow = Path('.github/workflows/candy-weekly-content.yml').read_text(encoding='utf-8')
+        self.assertIn('candy-premium-2026-09:', workflow)
+        self.assertNotIn('candy-tiktok-auto:', workflow)
 
 
 if __name__ == '__main__':

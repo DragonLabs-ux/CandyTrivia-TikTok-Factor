@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from candy_cloud import ROOT, TZ, CloudError, load_campaign
 
-SLOTS = ((11, 'A'), (15, 'A'), (19, 'B'))
+SLOTS = ((9, 'A'), (15, 'A'), (19, 'B'))
 CAPTIONS = (
     'Round {n}: Can you get all three? 🍭 #trivia #quiztok #mobilegames #iphone',
     'Round {n}: Three questions. One perfect score. 🍬 #trivia #quiztok #braingames #iphone',
