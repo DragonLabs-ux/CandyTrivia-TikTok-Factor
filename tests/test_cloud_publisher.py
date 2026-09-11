@@ -451,6 +451,24 @@ class PublisherTests(unittest.TestCase):
         self.assertLessEqual(len(text), 280)
         self.assertIn(c.DEFAULT_PROMO_APP_URL, text)
 
+    def test_content_sync_is_append_only(self):
+        added = copy.deepcopy(self.post)
+        added.update(id=c.CAMPAIGN + ':101', number=101,
+                     content_hash='new-content', approved_hash='new-approved')
+        posts = {self.post['id']: self.post, added['id']: added}
+        with patch.object(admin, 'load_campaign', return_value=posts), \
+             patch.object(admin, 'R2State', return_value=self.store):
+            admin.sync_content()
+        self.assertEqual('APPROVED', self.store.load()[0]['posts'][added['id']]['status'])
+
+    def test_content_sync_rejects_existing_changes(self):
+        changed = copy.deepcopy(self.post)
+        changed['approved_hash'] = 'changed'
+        with patch.object(admin, 'load_campaign', return_value={changed['id']: changed}), \
+             patch.object(admin, 'R2State', return_value=self.store):
+            with self.assertRaisesRegex(c.CloudError, 'EXISTING_APPROVED_CONTENT_CHANGED'):
+                admin.sync_content()
+
 
 if __name__ == '__main__':
     unittest.main()

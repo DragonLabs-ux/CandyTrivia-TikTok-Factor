@@ -1,0 +1,61 @@
+name: Candy Weekly Content Batch
+on:
+  schedule:
+    - cron: '5 13 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: candy-weekly-content
+  cancel-in-progress: false
+jobs:
+  draft:
+    if: vars.CANDY_CONTENT_AUTOMATION == 'true'
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      CANDY_CONTENT_MODEL: gpt-5.6-luna
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - id: generate
+        name: Generate and validate a seven-day batch
+        shell: bash
+        run: |
+          python candy_content.py --posts 21 --min-future-days 10
+          first="$(git status --porcelain -- examples/auto | awk 'NR==1 {print $2}')"
+          if [ -z "$first" ]; then
+            echo 'created=false' >> "$GITHUB_OUTPUT"
+          else
+            number="$(basename "$first" .json | sed 's/post-//; s/^0*//')"
+            echo 'created=true' >> "$GITHUB_OUTPUT"
+            echo "post=candy-tiktok-auto:${number}" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.generate.outputs.created == 'true'
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - if: steps.generate.outputs.created == 'true'
+        name: Install renderer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          npm ci
+          python -m pip install -r requirements-cloud.txt
+      - if: steps.generate.outputs.created == 'true'
+        name: Render one sample without uploading
+        run: python candy_cloud.py --mode render-only --post "${{ steps.generate.outputs.post }}"
+      - name: Open one review pull request when content was created
+        if: steps.generate.outputs.created == 'true'
+        shell: bash
+        run: |
+          branch="candy/weekly-${GITHUB_RUN_ID}"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git checkout -b "$branch"
+          git add examples/auto
+          git commit -m 'Prepare reviewed weekly Candy content batch'
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" --title 'Review next Candy Trivia weekly batch' --body 'Automatically prepared 21 posts. Review facts, source URLs, captions, and schedules. Merging approves append-only import; this workflow does not publish.'
