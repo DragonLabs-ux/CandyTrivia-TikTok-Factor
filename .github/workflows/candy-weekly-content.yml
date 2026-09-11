@@ -32,7 +32,7 @@ jobs:
           else
             number="$(basename "$first" .json | sed 's/post-//; s/^0*//')"
             echo 'created=true' >> "$GITHUB_OUTPUT"
-            echo "post=candy-tiktok-auto:${number}" >> "$GITHUB_OUTPUT"
+            echo "post=candy-premium-2026-09:$(printf '%03d' "$number")" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.generate.outputs.created == 'true'
         uses: actions/setup-node@v4
