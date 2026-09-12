@@ -345,6 +345,13 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual('tiktok_prepare_draft_upload', handoff['direct_step'])
         self.assertEqual([], current['buffer_ids'])
 
+    def test_direct_draft_accepts_legacy_cached_media_without_sha(self):
+        legacy_video = {'url': self.video['url'], 'key': 'legacy.mp4', 'bytes': 123}
+        c.prepare_direct_draft(self.store, self.post, render_fn=lambda p: 'file',
+                               upload_fn=lambda p, f: legacy_video)
+        self.assertEqual('DRAFT_READY', self.current()['status'])
+        self.assertTrue(self.current()['attempts'][-1]['video_hash'])
+
     def test_history_import_preserves_manual_evidence(self):
         s = self.store.load()[0]
         history = {'campaign_hash': c.digest({k: p['approved_hash'] for k, p in self.posts.items()}),
