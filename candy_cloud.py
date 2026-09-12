@@ -354,6 +354,7 @@ def record_direct_draft_ready(store, post, owner, video):
         p = s['posts'][post['id']]
         if p.get('owner') != owner or p['status'] != 'RENDERING':
             raise CloudError('SUBMISSION_STATE_CHANGED')
+        video_hash = video.get('sha256') or digest({k: video.get(k) for k in ('url', 'key', 'bytes')})
         p.update(status='DRAFT_READY', video=video, direct_draft={
             'media_url': video['url'],
             'caption': post['data']['caption'],
@@ -361,7 +362,7 @@ def record_direct_draft_ready(store, post, owner, video):
             'prepared_at': now_iso(),
         })
         p.setdefault('attempts', []).append({'id': owner, 'at': now_iso(),
-            'status': 'DRAFT_READY', 'video_hash': video['sha256'], 'channel': 'tiktok_direct_draft'})
+            'status': 'DRAFT_READY', 'video_hash': video_hash, 'channel': 'tiktok_direct_draft'})
         event(s, 'draft_ready', post['id'])
     store.change(change)
 
