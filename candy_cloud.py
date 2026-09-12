@@ -894,7 +894,15 @@ def main(argv=None):
             raise CloudError('PRODUCTION_REQUIRES_MAIN_GITHUB_RUNNER')
         if state.get('paused') or not state.get('local_disabled') or state.get('mode') != 'live':
             raise CloudError('PUBLISHING_GATE_CLOSED')
-        planned = [p for p in planned if p['id'] == args.post] if args.post else planned[:1]
+        if args.post:
+            if args.post not in posts:
+                raise CloudError('EXACT_POST_REQUIRED')
+            explicit = posts[args.post]
+            if dt(explicit['scheduled_at']) <= datetime.now(timezone.utc) + timedelta(minutes=45):
+                raise CloudError('SLOT_TOO_CLOSE')
+            planned = [explicit]
+        else:
+            planned = planned[:1]
         if not planned:
             raise CloudError('NO_ELIGIBLE_CANDY_POST')
         prepare_direct_draft(store, planned[0])
