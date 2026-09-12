@@ -18,12 +18,13 @@ on:
           - activate-canary
           - recover-canary-render
           - canary
+          - direct-draft
           - promote-live
           - refill
           - analytics
           - pause
       post:
-        description: Exact post ID for render-only or canary (candy-premium-2026-09:010)
+        description: Exact post ID for render-only, canary, or direct-draft (candy-premium-2026-09:010)
         type: string
         required: false
 
@@ -79,12 +80,12 @@ jobs:
           python -m unittest discover -s tests -v
           python candy_cloud_check.py
       - uses: actions/setup-node@v4
-        if: contains(fromJSON('["render-only","refill","canary"]'), env.MODE)
+        if: contains(fromJSON('["render-only","refill","canary","direct-draft"]'), env.MODE)
         with:
           node-version: '24'
           cache: npm
       - name: Install renderer and validation tools
-        if: contains(fromJSON('["render-only","refill","canary"]'), env.MODE)
+        if: contains(fromJSON('["render-only","refill","canary","direct-draft"]'), env.MODE)
         run: |
           npm ci
           npm run typecheck
@@ -114,4 +115,4 @@ jobs:
       - name: Failure guidance
         if: failure()
         run: |
-          echo 'Candy needs attention. Inspect the sanitized error above. Never rerun an uncertain Buffer submission without reconciliation.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Candy needs attention. Inspect the sanitized error above. Never rerun an uncertain Buffer or direct draft handoff without reconciliation.' >> "$GITHUB_STEP_SUMMARY"
