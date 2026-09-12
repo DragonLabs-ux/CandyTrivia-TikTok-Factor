@@ -104,7 +104,9 @@ class PublisherTests(unittest.TestCase):
         self.post = {'id': c.CAMPAIGN + ':100', 'number': 100, 'file': 'example.json',
             'scheduled_at': (self.now + timedelta(hours=6)).isoformat(), 'status': 'APPROVED',
             'approved_hash': 'approved', 'content_hash': 'unique', 'buffer_ids': [], 'attempts': [],
-            'data': {'caption': 'Quiz'}}
+            'data': {'caption': 'Quiz', 'q1': {'question': 'Which candy has a peanut butter cup?', 'answer': "Reese's"},
+                     'q2': {'question': 'Which candy is rainbow colored?', 'answer': 'Skittles'},
+                     'q3': {'question': 'Which candy has cookie crunch?', 'answer': 'Twix', 'withhold': True}}}
         self.posts = {self.post['id']: self.post}
         self.s3 = AtomicS3()
         self.store = c.R2State(self.s3)
@@ -320,6 +322,28 @@ class PublisherTests(unittest.TestCase):
     def test_due_or_too_close_posts_are_not_rescheduled(self):
         self.assertEqual([], c.candidates(self.store.load()[0], self.posts, self.now + timedelta(hours=6)))
         self.assertEqual([], c.candidates(self.store.load()[0], self.posts, self.now + timedelta(hours=5, minutes=30)))
+
+    def test_general_trivia_posts_are_not_candidates(self):
+        general = copy.deepcopy(self.post)
+        general['data'] = {'caption': 'Quiz', 'q1': {'question': 'What is 7 multiplied by 3?', 'answer': '21'},
+                           'q2': {'question': 'What is the capital of France?', 'answer': 'Paris'},
+                           'q3': {'question': 'What planet is red?', 'answer': 'Mars', 'withhold': True}}
+        self.assertFalse(c.candy_themed(general['data']))
+        self.assertEqual([], c.candidates(self.store.load()[0], {general['id']: general}, self.now))
+
+    def test_candy_gate_does_not_match_new_york_general_trivia(self):
+        general = copy.deepcopy(self.post['data'])
+        general['q1'] = {'question': 'What is the capital of New York?', 'answer': 'Albany'}
+        self.assertFalse(c.has_candy_term(general['q1']['question'] + ' ' + general['q1']['answer']))
+
+    def test_direct_draft_records_handoff_without_buffer(self):
+        handoff = c.prepare_direct_draft(self.store, self.post, render_fn=lambda p: 'file',
+                                        upload_fn=lambda p, f: self.video)
+        current = self.current()
+        self.assertEqual('DRAFT_READY', current['status'])
+        self.assertEqual(self.video['url'], handoff['media_url'])
+        self.assertEqual('tiktok_prepare_draft_upload', handoff['direct_step'])
+        self.assertEqual([], current['buffer_ids'])
 
     def test_history_import_preserves_manual_evidence(self):
         s = self.store.load()[0]

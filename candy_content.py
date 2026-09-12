@@ -3,7 +3,7 @@
 import argparse, json, os, re, time, urllib.error, urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
-from candy_cloud import ROOT, TZ, CloudError, load_campaign
+from candy_cloud import ROOT, TZ, CloudError, candy_themed, load_campaign
 
 SLOTS = ((9, 'A'), (15, 'A'), (19, 'B'))
 CAPTIONS = (
@@ -117,7 +117,13 @@ def generate(count=21, min_future_days=10):
     existing = [p['data'][s]['question'] for p in posts.values() for s in ('q1','q2','q3')]
     needed=count*3
     schema={'type':'object','properties':{'facts':{'type':'array','minItems':needed,'maxItems':needed,'items':{'type':'object','properties':{'question':{'type':'string'},'answer':{'type':'string'},'source_url':{'type':'string'}},'required':['question','answer','source_url'],'additionalProperties':False}}},'required':['facts'],'additionalProperties':False}
-    prompt=f"Create {needed} short, evergreen general-trivia question/answer pairs for a family-friendly TikTok quiz. Verify every answer with web search and give its direct reputable source URL. Avoid trick questions, disputed facts, current officeholders, and these existing questions: {json.dumps(existing)}"
+    prompt=(
+        f"Create {needed} short, evergreen candy-themed trivia question/answer pairs for a family-friendly "
+        "TikTok quiz promoting Trivia Candy Fun. Every question must be about candy, chocolate, gum, sweet "
+        "snacks, candy brands, candy history, candy ingredients, candy manufacturing, or candy pop culture; "
+        "do not create general geography, math, science, animal, capital-city, or app-category trivia. "
+        "Verify every answer with web search and give its direct reputable source URL. Avoid trick questions, "
+        f"disputed facts, current officeholders, and these existing questions: {json.dumps(existing)}")
     facts = request_json(prompt, schema, 'candy_facts')['facts']
     seen={' '.join(x.casefold().split()) for x in existing}; outputs=[]; next_day=max(p['number'] for p in posts.values())+1; start=latest.date()+timedelta(days=1)
     for i in range(count):
@@ -125,7 +131,8 @@ def generate(count=21, min_future_days=10):
         for q in qs:
             n=' '.join(q['question'].casefold().split())
             if (n in seen or not re.match(r'https://', q['source_url'])
-                    or not (5 <= len(q['question']) <= 100) or not (1 <= len(q['answer']) <= 45)):
+                    or not (5 <= len(q['question']) <= 100) or not (1 <= len(q['answer']) <= 45)
+                    or not candy_themed({'q1': q, 'q2': q, 'q3': {**q, 'withhold': True}})):
                 raise CloudError('INVALID_OR_DUPLICATE_GENERATED_FACT')
             seen.add(n)
     facts = verify_question_answers(facts)
@@ -133,7 +140,8 @@ def generate(count=21, min_future_days=10):
     for q in facts:
         n=' '.join(q['question'].casefold().split())
         if (n in seen or not re.match(r'https://', q['source_url'])
-                or not (5 <= len(q['question']) <= 100) or not (1 <= len(q['answer']) <= 45)):
+                or not (5 <= len(q['question']) <= 100) or not (1 <= len(q['answer']) <= 45)
+                or not candy_themed({'q1': q, 'q2': q, 'q3': {**q, 'withhold': True}})):
             raise CloudError('INVALID_OR_DUPLICATE_AUTOCORRECTED_FACT')
         seen.add(n)
     for i in range(count):
