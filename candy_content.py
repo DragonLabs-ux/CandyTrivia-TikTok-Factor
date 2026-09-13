@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Create a reviewable seven-day Candy batch; never publish or approve it."""
-import argparse, json, os, re, time, urllib.error, urllib.request
+import argparse, json, os, random, re, time, urllib.error, urllib.request
+from email.utils import parsedate_to_datetime
 from datetime import datetime, timedelta
 from pathlib import Path
 from candy_cloud import ROOT, TZ, CloudError, candy_themed, load_campaign
@@ -18,6 +19,29 @@ def response_text(payload):
             if part.get('type') == 'output_text': return part['text']
     raise CloudError('CONTENT_RESPONSE_MISSING')
 
+def _retry_delay_seconds(exc, attempt):
+    headers = exc.headers or {}
+    retry_after = headers.get('Retry-After')
+    if retry_after:
+        try:
+            return max(0, float(retry_after))
+        except ValueError:
+            try:
+                when = parsedate_to_datetime(retry_after)
+                return max(0, int((when - datetime.now(when.tzinfo)).total_seconds()))
+            except Exception:
+                pass
+    for key in ('x-ratelimit-reset-requests', 'x-ratelimit-reset', 'x-ratelimit-reset-tokens'):
+        value = headers.get(key)
+        if value is None:
+            continue
+        try:
+            reset = int(float(value))
+            return max(0, reset - int(time.time()))
+        except ValueError:
+            continue
+    return min(30 * (2 ** attempt), 240)
+
 def request_json(prompt, schema, name):
     api_key = os.environ.get('OPENAI_API_KEY')
     if not api_key:
@@ -28,19 +52,19 @@ def request_json(prompt, schema, name):
         'input': prompt,
         'text': {'format': {'type': 'json_schema', 'name': name, 'strict': True, 'schema': schema}},
     }
-    req = urllib.request.Request(
-        'https://api.openai.com/v1/responses', data=json.dumps(body).encode(),
-        headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'})
     for attempt in range(5):
+        req = urllib.request.Request(
+            'https://api.openai.com/v1/responses', data=json.dumps(body).encode(),
+            headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'})
         try:
             with urllib.request.urlopen(req, timeout=600) as response:
                 return json.loads(response_text(json.load(response)))
         except urllib.error.HTTPError as exc:
             if exc.code != 429 or attempt == 4:
                 raise
-            retry_after = exc.headers.get('Retry-After')
-            delay = int(retry_after) if retry_after and retry_after.isdigit() else 30 * (attempt + 1)
-            print(f'OpenAI rate limit; retrying in {delay}s.', flush=True)
+            delay = _retry_delay_seconds(exc, attempt)
+            delay = max(1.0, delay + random.uniform(0, min(1.0, delay / 10.0)))
+            print(f'OpenAI rate limit; retrying in {delay:.1f}s.', flush=True)
             time.sleep(delay)
     raise CloudError('CONTENT_RESPONSE_MISSING')
 

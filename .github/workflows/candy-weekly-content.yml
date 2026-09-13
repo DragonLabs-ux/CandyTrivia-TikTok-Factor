@@ -3,6 +3,17 @@ on:
   schedule:
     - cron: '5 13 * * 1'
   workflow_dispatch:
+    inputs:
+      posts:
+        description: Number of posts to generate per batch
+        required: false
+        default: '6'
+        type: number
+      min_future_days:
+        description: Minimum days of scheduled future content required before generating
+        required: false
+        default: '3'
+        type: number
 permissions:
   contents: write
   pull-requests: write
@@ -25,7 +36,7 @@ jobs:
         name: Generate and validate a seven-day batch
         shell: bash
         run: |
-          python candy_content.py --posts 21 --min-future-days 10
+          python candy_content.py --posts "${{ inputs.posts || 6 }}" --min-future-days "${{ inputs.min_future_days || 3 }}"
           first="$(git status --porcelain -- examples/auto | awk 'NR==1 {print $2}')"
           if [ -z "$first" ]; then
             echo 'created=false' >> "$GITHUB_OUTPUT"
