@@ -11,7 +11,7 @@
     "answers": ["Twix", "Milky Way", "Crunch", "Almond Joy"]
   },
   "q3": {
-    "question": "Which brand makes Sour Patch Kids?",
+    "question": "Which candy is known for starting sour and turning sweet?",
     "answer": "Sour Patch Kids",
     "withhold": true
   },
