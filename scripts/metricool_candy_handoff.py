@@ -150,8 +150,6 @@ def strip_log_prefixes(text: str) -> str:
 def extract_metricool_block(log_text: str) -> dict:
     cleaned = strip_log_prefixes(log_text)
     starts = [m.start() for m in re.finditer(r'\{\s*"metricool_media"\s*:', cleaned)]
-    if not starts:
-        raise Stop('No metricool_media block found in the workflow log.')
     errors: list[str] = []
     decoder = json.JSONDecoder()
     for start in reversed(starts):
@@ -163,7 +161,31 @@ def extract_metricool_block(log_text: str) -> dict:
         media = obj.get('metricool_media')
         if media and media.get('post_id') != 'candy-premium-2026-09:100':
             return media
-    raise Stop('Only the unit-test metricool_media block was found. Last JSON errors: ' + '; '.join(errors[-3:]))
+
+    # Fallback for gh log output where each JSON line is independently prefixed.
+    post_matches = re.findall(r'"post_id"\s*:\s*"(candy-premium-2026-09:\d{3})"', cleaned)
+    url_matches = re.findall(r'"media_url"\s*:\s*"([^"]+\.mp4)"', cleaned)
+    caption_matches = re.findall(r'"caption"\s*:\s*"([^"]*)"', cleaned)
+    schedule_matches = re.findall(r'"scheduled_at"\s*:\s*"([^"]+)"', cleaned)
+    candidates = [
+        (post_id, url)
+        for post_id, url in zip(post_matches, url_matches)
+        if post_id != 'candy-premium-2026-09:100'
+    ]
+    if candidates:
+        post_id, url = candidates[-1]
+        idx = max(i for i, value in enumerate(post_matches) if value == post_id)
+        return {
+            'post_id': post_id,
+            'media_url': url,
+            'caption': caption_matches[min(idx, len(caption_matches) - 1)] if caption_matches else '',
+            'scheduled_at': schedule_matches[min(idx, len(schedule_matches) - 1)] if schedule_matches else '',
+            'metricool_brand_id': '',
+            'direct_step': 'metricool_schedule_tiktok',
+        }
+
+    detail = '; '.join(errors[-3:]) if errors else 'no matching lines after prefix cleanup'
+    raise Stop('No metricool_media block found in the workflow log: ' + detail)
 
 
 def extract_media_key(media_url: str) -> str:
