@@ -19,12 +19,13 @@ on:
           - recover-canary-render
           - canary
           - direct-draft
+          - metricool-media
           - promote-live
           - refill
           - analytics
           - pause
       post:
-        description: Exact post ID for render-only, canary, or direct-draft (candy-premium-2026-09:010)
+        description: Exact post ID for render-only, canary, direct-draft, or metricool-media (candy-premium-2026-09:010)
         type: string
         required: false
 
@@ -80,12 +81,12 @@ jobs:
           python -m unittest discover -s tests -v
           python candy_cloud_check.py
       - uses: actions/setup-node@v4
-        if: contains(fromJSON('["render-only","refill","canary","direct-draft"]'), env.MODE)
+        if: contains(fromJSON('["render-only","refill","canary","direct-draft","metricool-media"]'), env.MODE)
         with:
           node-version: '24'
           cache: npm
       - name: Install renderer and validation tools
-        if: contains(fromJSON('["render-only","refill","canary","direct-draft"]'), env.MODE)
+        if: contains(fromJSON('["render-only","refill","canary","direct-draft","metricool-media"]'), env.MODE)
         run: |
           npm ci
           npm run typecheck
