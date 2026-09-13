@@ -133,11 +133,15 @@ def verify_question_answers(facts):
         raise CloudError('QUESTION_ANSWER_AUTOCORRECT_FAILED')
     return corrected
 
-def generate(count=21, min_future_days=10):
+def generate(count=21, min_future_days=10, force=False):
+    if count < 1:
+        raise CloudError('POST_COUNT_REQUIRED')
     posts = load_campaign(); now = datetime.now(TZ)
     latest = max(datetime.fromisoformat(p['scheduled_at']).astimezone(TZ) for p in posts.values())
-    if (latest.date() - now.date()).days >= min_future_days:
+    if not force and (latest.date() - now.date()).days >= min_future_days:
         print('Content coverage is sufficient; no batch created.'); return []
+    if force:
+        print('Force enabled; creating review-only posts beyond the latest local campaign date.', flush=True)
     existing = [p['data'][s]['question'] for p in posts.values() for s in ('q1','q2','q3')]
     needed=count*3
     schema={'type':'object','properties':{'facts':{'type':'array','minItems':needed,'maxItems':needed,'items':{'type':'object','properties':{'question':{'type':'string'},'answer':{'type':'string'},'source_url':{'type':'string'}},'required':['question','answer','source_url'],'additionalProperties':False}}},'required':['facts'],'additionalProperties':False}
@@ -190,4 +194,4 @@ def generate(count=21, min_future_days=10):
     print(f'Created {len(written)} review-only posts.'); return written
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(); p.add_argument('--posts',type=int,default=21); p.add_argument('--min-future-days',type=int,default=10); a=p.parse_args(); generate(a.posts,a.min_future_days)
+    p=argparse.ArgumentParser(); p.add_argument('--posts',type=int,default=21); p.add_argument('--min-future-days',type=int,default=10); p.add_argument('--force',action='store_true'); a=p.parse_args(); generate(a.posts,a.min_future_days,a.force)
