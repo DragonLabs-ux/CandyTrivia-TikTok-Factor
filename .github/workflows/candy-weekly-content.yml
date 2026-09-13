@@ -14,6 +14,11 @@ on:
         required: false
         default: '3'
         type: number
+      force:
+        description: Force a review batch beyond the latest local campaign date
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: write
   pull-requests: write
@@ -33,10 +38,14 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - id: generate
-        name: Generate and validate a seven-day batch
+        name: Generate and validate a review batch
         shell: bash
         run: |
-          python candy_content.py --posts "${{ inputs.posts || 6 }}" --min-future-days "${{ inputs.min_future_days || 3 }}"
+          force_arg=""
+          if [ "${{ inputs.force || false }}" = "true" ]; then
+            force_arg="--force"
+          fi
+          python candy_content.py --posts "${{ inputs.posts || 6 }}" --min-future-days "${{ inputs.min_future_days || 3 }}" $force_arg
           first="$(git status --porcelain -- examples/auto | awk 'NR==1 {print $2}')"
           if [ -z "$first" ]; then
             echo 'created=false' >> "$GITHUB_OUTPUT"
@@ -69,4 +78,4 @@ jobs:
           git add examples/auto
           git commit -m 'Prepare reviewed weekly Candy content batch'
           git push origin "$branch"
-          gh pr create --base main --head "$branch" --title 'Review next Candy Trivia weekly batch' --body 'Automatically prepared 21 posts. Review facts, source URLs, captions, and schedules. Merging approves append-only import; this workflow does not publish.'
+          gh pr create --base main --head "$branch" --title 'Review next Candy Trivia weekly batch' --body 'Automatically prepared a review-only Candy Trivia batch. Review facts, source URLs, captions, and schedules. Merging approves append-only import; this workflow does not publish.'
