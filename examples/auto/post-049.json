@@ -1,0 +1,32 @@
+{
+  "day": 49,
+  "q1": {
+    "question": "Which candy pieces are packed in a tube and known for a mint flavor?",
+    "answer": "Mentos",
+    "answers": ["Mentos", "M&M's", "Skittles", "Twizzlers"]
+  },
+  "q2": {
+    "question": "Which candy brand is known for twisted strawberry licorice?",
+    "answer": "Twizzlers",
+    "answers": ["Twizzlers", "Reese's", "Kit Kat", "Ferrero Rocher"]
+  },
+  "q3": {
+    "question": "Which candy has a hard shell and a chocolate center?",
+    "answer": "M&M's",
+    "withhold": true
+  },
+  "caption": "Last one is a classic. Did you nail it? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-09-17T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 17,
+    "slot": 3,
+    "format": "manual-candy-trivia",
+    "goal": "review-buffer-refill",
+    "sources": [
+      "https://www.mentos.com/",
+      "https://www.hersheyland.com/twizzlers",
+      "https://www.mars.com/our-brands/mms"
+    ]
+  },
+  "visualTemplate": "B"
+}
