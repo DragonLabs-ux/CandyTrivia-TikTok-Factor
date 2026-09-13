@@ -205,12 +205,17 @@ def verify_url(url: str) -> None:
     request = urllib.request.Request(url, method='HEAD', headers={
         'User-Agent': 'CandyMetricoolHandoff/1.0'
     })
-    with urllib.request.urlopen(request, timeout=30) as response:
-        if response.status != 200:
-            raise Stop(f'Public media check failed with HTTP {response.status}.')
-        content_type = response.headers.get_content_type()
-        if content_type != 'video/mp4':
-            raise Stop(f'Public media is not video/mp4: {content_type}')
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            if response.status != 200:
+                raise Stop(f'Public media check failed with HTTP {response.status}.')
+            content_type = response.headers.get_content_type()
+            if content_type != 'video/mp4':
+                raise Stop(f'Public media is not video/mp4: {content_type}')
+    except Stop:
+        raise
+    except Exception as exc:
+        raise Stop(f'Public media URL could not be reached: {url}\n{exc}') from None
 
 
 def main(argv: list[str] | None = None) -> int:
