@@ -35,10 +35,17 @@ class Stop(RuntimeError):
     pass
 
 
-def run(cmd: list[str], *, check: bool = True) -> str:
+def run(cmd: list[str], *, check: bool = True, timeout: int | None = 120) -> str:
     print('+ ' + ' '.join(cmd), flush=True)
-    completed = subprocess.run(cmd, cwd=ROOT, text=True, stdout=subprocess.PIPE,
-                               stderr=subprocess.STDOUT)
+    try:
+        completed = subprocess.run(cmd, cwd=ROOT, text=True, encoding='utf-8', errors='replace',
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                   timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        partial = exc.stdout or ''
+        if isinstance(partial, bytes):
+            partial = partial.decode('utf-8', errors='replace')
+        raise Stop(f'Command timed out: {cmd[0]}\n{partial.strip()}') from None
     if check and completed.returncode:
         raise Stop(completed.stdout.strip() or f'Command failed: {cmd[0]}')
     return completed.stdout
@@ -67,7 +74,7 @@ def find_public_base(cli_value: str | None) -> str | None:
         if value:
             return value.strip().rstrip('/')
     # Optional non-secret repo variable, if you choose to create one later.
-    value = run(['gh', 'variable', 'get', 'CANDY_R2_PUBLIC_BASE_URL', '--repo', REPO], check=False).strip()
+    value = run(['gh', 'variable', 'get', 'CANDY_R2_PUBLIC_BASE_URL', '--repo', REPO], check=False, timeout=30).strip()
     if value and 'could not' not in value.lower() and 'not found' not in value.lower():
         return value.rstrip('/')
     return None
@@ -89,17 +96,22 @@ def newest_dispatch_run() -> str:
 
 
 def dispatch(post: str) -> str:
-    output = run(['gh', 'workflow', 'run', WORKFLOW, '--repo', REPO,
-                  '-f', 'mode=metricool-media', '-f', f'post={post}'])
-    time.sleep(5)
-    return parse_run_id(output) or newest_dispatch_run()
+    try:
+        output = run(['gh', 'workflow', 'run', WORKFLOW, '--repo', REPO,
+                      '-f', 'mode=metricool-media', '-f', f'post={post}'], timeout=60)
+        time.sleep(5)
+        return parse_run_id(output) or newest_dispatch_run()
+    except Stop as exc:
+        print(str(exc), file=sys.stderr)
+        print('Checking newest workflow_dispatch run in case GitHub accepted the dispatch...', flush=True)
+        return newest_dispatch_run()
 
 
 def wait_for_run(run_id: str, timeout_minutes: int) -> dict:
     deadline = time.time() + timeout_minutes * 60
     while time.time() < deadline:
         raw = run(['gh', 'run', 'view', run_id, '--repo', REPO,
-                   '--json', 'status,conclusion,url,jobs'], check=False)
+                   '--json', 'status,conclusion,url,jobs'], check=False, timeout=60)
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
@@ -118,7 +130,7 @@ def wait_for_run(run_id: str, timeout_minutes: int) -> dict:
 
 
 def fetch_logs(run_id: str) -> str:
-    return run(['gh', 'run', 'view', run_id, '--repo', REPO, '--log'])
+    return run(['gh', 'run', 'view', run_id, '--repo', REPO, '--log'], timeout=180)
 
 
 def strip_log_prefixes(text: str) -> str:
@@ -186,7 +198,7 @@ def main(argv: list[str] | None = None) -> int:
     REPO = args.repo
 
     if not args.no_pull:
-        run(['git', 'pull', 'origin', 'main'], check=False)
+        run(['git', 'pull', 'origin', 'main'], check=False, timeout=60)
 
     public_base = find_public_base(args.r2_public_base_url)
     run_id = args.run_id or dispatch(args.post)
