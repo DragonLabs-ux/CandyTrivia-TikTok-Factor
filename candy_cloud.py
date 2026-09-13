@@ -813,6 +813,32 @@ def prepare_direct_draft(store, post, render_fn=render, upload_fn=upload, cache_
     return handoff
 
 
+def prepare_metricool_media(store, post, render_fn=render, upload_fn=upload, cache_fn=cached_media):
+    if not candy_themed(post['data']):
+        raise CloudError('NOT_CANDY_THEMED')
+    state, _ = store.load()
+    existing = state['posts'].get(post['id'])
+    if not existing or existing.get('approved_hash') != post['approved_hash']:
+        raise CloudError('APPROVED_CONTENT_CHANGED')
+    video = cache_fn(store, post) or upload_fn(post, render_fn(post))
+    video['render_key'] = render_key(post)
+    def remember(s):
+        p = s['posts'][post['id']]
+        if p.get('approved_hash') != post['approved_hash']:
+            raise CloudError('APPROVED_CONTENT_CHANGED')
+        p['cached_video'] = video
+        event(s, 'metricool_media_ready', post['id'])
+    store.change(remember)
+    handoff = {'post_id': post['id'], 'media_url': video['url'], 'caption': post['data']['caption'],
+               'scheduled_at': post['scheduled_at'], 'metricool_brand_id': os.environ.get('METRICOOL_BRAND_ID', ''),
+               'direct_step': 'metricool_schedule_tiktok'}
+    print(json.dumps({'metricool_media': handoff}, indent=2))
+    if path := os.environ.get('GITHUB_STEP_SUMMARY'):
+        with open(path, 'a', encoding='utf-8') as f:
+            f.write('Metricool media handoff\n\n```json\n' + json.dumps(handoff, indent=2) + '\n```\n')
+    return handoff
+
+
 def analytics(store, buffer):
     state, _ = store.load()
     collected = {}
@@ -862,8 +888,8 @@ def report(state, posts, planned=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=['status', 'dry-run', 'shadow', 'refill', 'canary', 'render-only',
-                                           'direct-draft', 'analytics', 'pause'], default='status')
-    parser.add_argument('--post', help='Exact approved post ID for render-only/canary/direct-draft')
+                                           'direct-draft', 'metricool-media', 'analytics', 'pause'], default='status')
+    parser.add_argument('--post', help='Exact approved post ID for render-only/canary/direct-draft/metricool-media')
     parser.add_argument('--local-env', action='store_true')
     args = parser.parse_args(argv)
     if args.local_env:
@@ -882,6 +908,11 @@ def main(argv=None):
     if args.mode == 'pause':
         store.change(lambda s: s.update(paused=True))
         print('New submissions paused. Existing Buffer queue is unchanged.')
+        return 0
+    if args.mode == 'metricool-media':
+        if args.post not in posts:
+            raise CloudError('EXACT_POST_REQUIRED')
+        prepare_metricool_media(store, posts[args.post])
         return 0
     if args.mode in {'status', 'dry-run'}:
         report(state, posts, candidates(state, posts, datetime.now(timezone.utc)))
