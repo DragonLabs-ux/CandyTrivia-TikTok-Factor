@@ -1,0 +1,32 @@
+{
+  "day": 48,
+  "q1": {
+    "question": "Which candy is known for the colors red, orange, yellow, green, blue, and purple?",
+    "answer": "Skittles",
+    "answers": ["Skittles", "Twix", "Snickers", "Almond Joy"]
+  },
+  "q2": {
+    "question": "Which chocolate bar has a coconut filling and two almonds on top?",
+    "answer": "Almond Joy",
+    "answers": ["Almond Joy", "Milky Way", "Crunch", "Butterfinger"]
+  },
+  "q3": {
+    "question": "Which candy bar name means a group of stars?",
+    "answer": "Milky Way",
+    "withhold": true
+  },
+  "caption": "Candy brain check. What was your score? #candytok #trivia #quiztime #snackfacts",
+  "scheduledAt": "2026-09-17T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 17,
+    "slot": 2,
+    "format": "manual-candy-trivia",
+    "goal": "review-buffer-refill",
+    "sources": [
+      "https://www.skittles.com/",
+      "https://www.hersheyland.com/almond-joy",
+      "https://www.mars.com/our-brands/milky-way"
+    ]
+  },
+  "visualTemplate": "A"
+}
