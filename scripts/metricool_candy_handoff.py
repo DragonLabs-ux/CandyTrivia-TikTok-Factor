@@ -171,6 +171,7 @@ def verify_url(url: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    global REPO
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--post', default=DEFAULT_POST,
                         help=f'Candy post id to render/upload. Default: {DEFAULT_POST}')
@@ -182,7 +183,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--skip-url-check', action='store_true')
     args = parser.parse_args(argv)
 
-    global REPO
     REPO = args.repo
 
     if not args.no_pull:
