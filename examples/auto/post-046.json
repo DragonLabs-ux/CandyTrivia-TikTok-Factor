@@ -1,0 +1,32 @@
+{
+  "day": 46,
+  "q1": {
+    "question": "Which candy is known for being a peanut, caramel, and nougat chocolate bar?",
+    "answer": "Snickers",
+    "answers": ["Snickers", "Twix", "Kit Kat", "Butterfinger"]
+  },
+  "q2": {
+    "question": "Which candy comes as two cookie bars with caramel and chocolate?",
+    "answer": "Twix",
+    "answers": ["Twix", "Milky Way", "Crunch", "Almond Joy"]
+  },
+  "q3": {
+    "question": "Which candy is known for starting sour and turning sweet?",
+    "answer": "Sour Patch Kids",
+    "withhold": true
+  },
+  "caption": "Three candy clues. How many did you know? #trivia #candytok #quiztime #candyfacts",
+  "scheduledAt": "2026-09-16T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 16,
+    "slot": 3,
+    "format": "manual-candy-trivia",
+    "goal": "review-buffer-refill",
+    "sources": [
+      "https://www.snickers.com/",
+      "https://www.twix.com/",
+      "https://www.sourpatchkids.com/"
+    ]
+  },
+  "visualTemplate": "B"
+}
