@@ -352,6 +352,22 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual('DRAFT_READY', self.current()['status'])
         self.assertTrue(self.current()['attempts'][-1]['video_hash'])
 
+    def test_metricool_media_only_records_handoff_without_buffer_or_publish_gate(self):
+        buffer = FakeBuffer()
+        with patch.dict(os.environ, {'CANDY_PUBLISHING_ENABLED': 'false',
+                                     'METRICOOL_BRAND_ID': '6945372',
+                                     'METRICOOL_TIKTOK_ACCOUNT': 'triviacandyfun'}):
+            handoff = c.prepare_metricool_media(self.store, self.post, render_fn=lambda p: 'file',
+                                                upload_fn=lambda p, f: self.video)
+        current = self.current()
+        self.assertEqual('DRAFT_READY', current['status'])
+        self.assertEqual(self.video['url'], handoff['media_url'])
+        self.assertEqual('metricool_schedule_tiktok_media', handoff['direct_step'])
+        self.assertEqual('6945372', handoff['metricool_brand_id'])
+        self.assertEqual('triviacandyfun', handoff['metricool_account'])
+        self.assertEqual('metricool_tiktok_media', current['attempts'][-1]['channel'])
+        self.assertEqual(0, buffer.calls)
+
     def test_history_import_preserves_manual_evidence(self):
         s = self.store.load()[0]
         history = {'campaign_hash': c.digest({k: p['approved_hash'] for k, p in self.posts.items()}),

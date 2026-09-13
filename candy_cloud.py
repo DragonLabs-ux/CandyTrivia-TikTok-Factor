@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GitHub runner: approved JSON -> Remotion -> R2 -> Buffer/direct TikTok handoff.
+"""GitHub runner: approved JSON -> Remotion -> R2 -> Buffer/direct TikTok/Metricool handoff.
 
 The private R2 state object is authoritative. Every state change is conditional
 on its ETag; missing/corrupt state fails closed. Buffer POSTs are NEVER retried.
@@ -364,6 +364,25 @@ def record_direct_draft_ready(store, post, owner, video):
         p.setdefault('attempts', []).append({'id': owner, 'at': now_iso(),
             'status': 'DRAFT_READY', 'video_hash': video_hash, 'channel': 'tiktok_direct_draft'})
         event(s, 'draft_ready', post['id'])
+    store.change(change)
+
+
+def record_metricool_media_ready(store, post, owner, video):
+    def change(s):
+        p = s['posts'][post['id']]
+        if p.get('owner') != owner or p['status'] != 'RENDERING':
+            raise CloudError('SUBMISSION_STATE_CHANGED')
+        video_hash = video.get('sha256') or digest({k: video.get(k) for k in ('url', 'key', 'bytes')})
+        p.update(status='DRAFT_READY', video=video, metricool_media={
+            'media_url': video['url'],
+            'caption': post['data']['caption'],
+            'scheduled_at': post['scheduled_at'],
+            'prepared_at': now_iso(),
+            'platform': 'tiktok',
+        })
+        p.setdefault('attempts', []).append({'id': owner, 'at': now_iso(),
+            'status': 'DRAFT_READY', 'video_hash': video_hash, 'channel': 'metricool_tiktok_media'})
+        event(s, 'metricool_media_ready', post['id'])
     store.change(change)
 
 
@@ -813,6 +832,38 @@ def prepare_direct_draft(store, post, render_fn=render, upload_fn=upload, cache_
     return handoff
 
 
+def prepare_metricool_media(store, post, render_fn=render, upload_fn=upload, cache_fn=cached_media):
+    if not candy_themed(post['data']):
+        raise CloudError('NOT_CANDY_THEMED')
+    owner = uuid.uuid4().hex
+    claim(store, post, owner, datetime.now(timezone.utc))
+    stage = 'media'
+    try:
+        video = cache_fn(store, post) or upload_fn(post, render_fn(post))
+        video['render_key'] = render_key(post)
+        stage = 'metricool_media_ready'
+        record_metricool_media_ready(store, post, owner, video)
+    except Exception as exc:
+        def failed(s):
+            p = s['posts'][post['id']]
+            if p['status'] == 'RENDERING' and p.get('owner') == owner:
+                p.update(status='FAILED_RENDER', error='PRE_METRICOOL_MEDIA_FAILED')
+        store.change(failed)
+        if isinstance(exc, CloudError):
+            raise
+        raise CloudError('PRE_METRICOOL_MEDIA_' + stage.upper() + '_FAILED') from None
+    handoff = {'post_id': post['id'], 'media_url': video['url'], 'caption': post['data']['caption'],
+               'scheduled_at': post['scheduled_at'], 'platform': 'tiktok',
+               'metricool_brand_id': os.environ.get('METRICOOL_BRAND_ID', ''),
+               'metricool_account': os.environ.get('METRICOOL_TIKTOK_ACCOUNT', 'triviacandyfun'),
+               'direct_step': 'metricool_schedule_tiktok_media'}
+    print(json.dumps({'metricool_media_handoff': handoff}, indent=2))
+    if path := os.environ.get('GITHUB_STEP_SUMMARY'):
+        with open(path, 'a', encoding='utf-8') as f:
+            f.write('Metricool TikTok media handoff\n\n```json\n' + json.dumps(handoff, indent=2) + '\n```\n')
+    return handoff
+
+
 def analytics(store, buffer):
     state, _ = store.load()
     collected = {}
@@ -862,8 +913,9 @@ def report(state, posts, planned=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=['status', 'dry-run', 'shadow', 'refill', 'canary', 'render-only',
-                                           'direct-draft', 'analytics', 'pause'], default='status')
-    parser.add_argument('--post', help='Exact approved post ID for render-only/canary/direct-draft')
+                                           'metricool-media-only', 'direct-draft', 'analytics', 'pause'],
+                        default='status')
+    parser.add_argument('--post', help='Exact approved post ID for render-only/canary/direct-draft/metricool-media-only')
     parser.add_argument('--local-env', action='store_true')
     args = parser.parse_args(argv)
     if args.local_env:
@@ -888,6 +940,16 @@ def main(argv=None):
         return 0
     state, _ = store.load()
     planned = candidates(state, posts, datetime.now(timezone.utc))
+    if args.mode == 'metricool-media-only':
+        if not args.post or args.post not in posts:
+            raise CloudError('EXACT_POST_REQUIRED')
+        explicit = posts[args.post]
+        if dt(explicit['scheduled_at']) <= datetime.now(timezone.utc) + timedelta(minutes=45):
+            raise CloudError('SLOT_TOO_CLOSE')
+        prepare_metricool_media(store, explicit)
+        state, _ = store.load()
+        report(state, posts, [explicit])
+        return 0
     if args.mode == 'direct-draft':
         if os.environ.get('CANDY_PUBLISHING_ENABLED') != 'true':
             raise CloudError('PUBLISHING_DISABLED')
