@@ -134,8 +134,17 @@ def fetch_logs(run_id: str) -> str:
 
 
 def strip_log_prefixes(text: str) -> str:
-    # GitHub log lines often start with timestamps. Keep JSON extraction simple.
-    return re.sub(r'^\d{4}-\d\d-\d\dT[^\s]+\s', '', text, flags=re.MULTILINE)
+    # GitHub logs can include timestamps, job/step prefixes, and ANSI escapes.
+    text = re.sub(r'\x1b\[[0-9;]*m', '', text)
+    lines: list[str] = []
+    for line in text.splitlines():
+        line = line.lstrip('\ufeff')
+        line = re.sub(r'^\d{4}-\d\d-\d\dT[^\s]+\s', '', line)
+        # gh --log commonly prefixes lines as: job<TAB>step<TAB>message
+        if '\t' in line:
+            line = line.rsplit('\t', 1)[-1]
+        lines.append(line)
+    return '\n'.join(lines)
 
 
 def extract_metricool_block(log_text: str) -> dict:
