@@ -12,6 +12,7 @@ on:
         options:
           - status
           - dry-run
+          - buffer-diagnostics
           - import-history
           - shadow
           - render-only
@@ -97,6 +98,9 @@ jobs:
         shell: bash
         run: |
           case "$MODE" in
+            buffer-diagnostics)
+              python buffer_diagnostics.py
+              ;;
             import-history|activate-canary|recover-canary-render|promote-live)
               args=("$MODE")
               if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
