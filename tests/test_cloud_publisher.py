@@ -353,14 +353,18 @@ class PublisherTests(unittest.TestCase):
         self.assertTrue(self.current()['attempts'][-1]['video_hash'])
 
     def test_metricool_media_records_cache_without_buffer(self):
-        handoff = c.prepare_metricool_media(self.store, self.post, render_fn=lambda p: 'file',
-                                            upload_fn=lambda p, f: dict(self.video))
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'CANDY_HANDOFF_DIR': tmp}):
+            handoff = c.prepare_metricool_media(self.store, self.post, render_fn=lambda p: 'file',
+                                                upload_fn=lambda p, f: dict(self.video))
+            artifact = Path(tmp) / 'metricool_media-candy-premium-2026-09-100.json'
+            saved = json.loads(artifact.read_text(encoding='utf-8'))
         current = self.current()
         self.assertEqual('APPROVED', current['status'])
         self.assertEqual(self.video['url'], handoff['media_url'])
         self.assertEqual('metricool_schedule_tiktok', handoff['direct_step'])
         self.assertEqual(self.video['url'], current['cached_video']['url'])
         self.assertEqual([], current['buffer_ids'])
+        self.assertEqual(self.video['url'], saved['metricool_media']['media_url'])
 
     def test_history_import_preserves_manual_evidence(self):
         s = self.store.load()[0]

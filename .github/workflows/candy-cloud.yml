@@ -66,6 +66,7 @@ jobs:
       TTS_VOICE: en-US-AvaNeural
       TTS_RATE: +8%
       TTS_PITCH: +0Hz
+      CANDY_HANDOFF_DIR: out/handoff
 
     steps:
       - uses: actions/checkout@v4
@@ -110,6 +111,13 @@ jobs:
               python candy_cloud.py "${args[@]}"
               ;;
           esac
+      - name: Upload scheduling handoff
+        if: always() && contains(fromJSON('["direct-draft","metricool-media"]'), env.MODE)
+        uses: actions/upload-artifact@v4
+        with:
+          name: candy-${{ env.MODE }}-${{ github.run_number }}
+          path: out/handoff/*.json
+          if-no-files-found: warn
       - name: Collect due 1h 24h and 72h analytics checkpoints
         if: github.event_name == 'schedule' && env.MODE != 'analytics'
         run: python candy_metrics.py

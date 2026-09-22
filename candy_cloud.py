@@ -719,6 +719,26 @@ def render_key(post):
         'voice': ['en-US-AvaNeural', '+8%', '+0Hz'], 'pipeline': 'cloud-v1'})
 
 
+def public_handoff(name, handoff):
+    out_dir = os.environ.get('CANDY_HANDOFF_DIR', '').strip()
+    safe = dict(handoff)
+    if safe.get('media_url'):
+        safe['media_url'] = '[full URL saved in workflow artifact]'
+    print(json.dumps({name: safe}, indent=2))
+    if path := os.environ.get('GITHUB_STEP_SUMMARY'):
+        with open(path, 'a', encoding='utf-8') as f:
+            f.write(name.replace('_', ' ').title() + '\n\n```json\n' + json.dumps(safe, indent=2) + '\n```\n')
+    if out_dir:
+        target = Path(out_dir)
+        if not target.is_absolute():
+            target = ROOT / target
+        target.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r'[^A-Za-z0-9._-]+', '-', str(handoff.get('post_id', name))).strip('-')
+        payload = {name: handoff}
+        (target / f'{name}-{slug}.json').write_text(json.dumps(payload, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+        (target / f'{name}-latest.json').write_text(json.dumps(payload, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+
 def cached_media(store, post):
     state, _ = store.load()
     video = state['posts'][post['id']].get('cached_video')
@@ -805,11 +825,9 @@ def prepare_direct_draft(store, post, render_fn=render, upload_fn=upload, cache_
             raise
         raise CloudError('PRE_DIRECT_DRAFT_' + stage.upper() + '_FAILED') from None
     handoff = {'post_id': post['id'], 'media_url': video['url'], 'caption': post['data']['caption'],
-               'scheduled_at': post['scheduled_at'], 'direct_step': 'tiktok_prepare_draft_upload'}
-    print(json.dumps({'direct_tiktok_draft': handoff}, indent=2))
-    if path := os.environ.get('GITHUB_STEP_SUMMARY'):
-        with open(path, 'a', encoding='utf-8') as f:
-            f.write('Direct TikTok draft handoff\n\n```json\n' + json.dumps(handoff, indent=2) + '\n```\n')
+               'media_key': video.get('key'), 'scheduled_at': post['scheduled_at'],
+               'direct_step': 'tiktok_prepare_draft_upload'}
+    public_handoff('direct_tiktok_draft', handoff)
     return handoff
 
 
@@ -830,12 +848,10 @@ def prepare_metricool_media(store, post, render_fn=render, upload_fn=upload, cac
         event(s, 'metricool_media_ready', post['id'])
     store.change(remember)
     handoff = {'post_id': post['id'], 'media_url': video['url'], 'caption': post['data']['caption'],
-               'scheduled_at': post['scheduled_at'], 'metricool_brand_id': os.environ.get('METRICOOL_BRAND_ID', ''),
+               'media_key': video.get('key'), 'scheduled_at': post['scheduled_at'],
+               'metricool_brand_id': os.environ.get('METRICOOL_BRAND_ID', ''),
                'direct_step': 'metricool_schedule_tiktok'}
-    print(json.dumps({'metricool_media': handoff}, indent=2))
-    if path := os.environ.get('GITHUB_STEP_SUMMARY'):
-        with open(path, 'a', encoding='utf-8') as f:
-            f.write('Metricool media handoff\n\n```json\n' + json.dumps(handoff, indent=2) + '\n```\n')
+    public_handoff('metricool_media', handoff)
     return handoff
 
 
