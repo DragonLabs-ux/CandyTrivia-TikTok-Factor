@@ -1,0 +1,38 @@
+{
+  "day": 52,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "In what year was HARIBO founded?",
+    "answer": "1920"
+  },
+  "q2": {
+    "question": "What animal inspired the first HARIBO gummy shape?",
+    "answer": "Dancing Bear"
+  },
+  "q3": {
+    "question": "What year did HARIBO Goldbears get their current name?",
+    "answer": "1960",
+    "withhold": true
+  },
+  "caption": "Think you know candy history? Prove it before the answers are revealed. Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #QuizChallenge #CandyFun #TriviaTok #MobileGames",
+  "scheduledAt": "2026-10-03T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 3,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://www.haribo.com/en-ca/about-us/history",
+      "https://www.haribo.com/en-ca/about-us/history",
+      "https://www.haribo.com/volumes/downloads-global/Press/Germany/Pressematerial-Download-Center/Factsheet_100-Jahre-Haribo-Goldb%C3%A4ren.pdf"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "C"
+  },
+  "visualTemplate": "C",
+  "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077"
+}

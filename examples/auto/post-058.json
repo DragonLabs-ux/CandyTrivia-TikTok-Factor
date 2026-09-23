@@ -1,0 +1,38 @@
+{
+  "day": 58,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "In what year were Maltesers first introduced in the UK?",
+    "answer": "1936"
+  },
+  "q2": {
+    "question": "In what year were 3 MUSKETEERS introduced in the United States?",
+    "answer": "1932"
+  },
+  "q3": {
+    "question": "In what year were MOUNDS Bars created?",
+    "answer": "1920",
+    "withhold": true
+  },
+  "caption": "No peeking at the answers. Play the round, test your memory, and share your score. Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #QuizChallenge #MobileGames #CandyFun #TriviaTok",
+  "scheduledAt": "2026-10-09T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 9,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://www.mars.com/our-brands/mars-snacking",
+      "https://www.mars.com/about/history",
+      "https://investors.thehersheycompany.com/content/hersheyland/en-us/home/about-us/history.html"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "C"
+  },
+  "visualTemplate": "C",
+  "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077"
+}

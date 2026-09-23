@@ -1,0 +1,38 @@
+{
+  "day": 56,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "In what year were Reese Peanut Butter Cups created?",
+    "answer": "1928"
+  },
+  "q2": {
+    "question": "What was H.B. Reese before creating Reese Cups?",
+    "answer": "A Hershey employee"
+  },
+  "q3": {
+    "question": "In what year did Hershey acquire the Reese business?",
+    "answer": "1963",
+    "withhold": true
+  },
+  "caption": "Only true candy fans get all three. Trust your sweet tooth and lock in your answers. Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #CandyFun #TriviaTok #MobileGames #SweetChallenge",
+  "scheduledAt": "2026-10-07T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 7,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://www.thehersheycompany.com/content/hershey-chocolate-world/en-us/home/blog/reeses-brand.html",
+      "https://investors.thehersheycompany.com/content/hersheyland/en-us/home/our-brands/reeses.html",
+      "https://www.thehersheycompany.com/en_us/home/newsroom/blog/same-craft-same-care-same-reeses.html"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "A"
+  },
+  "visualTemplate": "A",
+  "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077"
+}

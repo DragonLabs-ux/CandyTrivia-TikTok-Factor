@@ -6,11 +6,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from candy_cloud import ROOT, TZ, CloudError, candy_themed, load_campaign
 
-SLOTS = ((10, 'A'),)
+APP_STORE_URL = 'https://apps.apple.com/us/app/trivia-candy-fun/id6768475077'
+APP_STORE_CTA = 'Download Trivia Candy Fun on the App Store.'
+NARRATION_STYLE = 'Energetic adult game-show host with a fun, friendly delivery.'
+SLOTS = ((10, 'A'), (10, 'B'), (10, 'C'))
 CAPTIONS = (
-    'Round {n}: Can you get all three? 🍭 #trivia #quiztok #mobilegames #iphone',
-    'Round {n}: Three questions. One perfect score. 🍬 #trivia #quiztok #braingames #iphone',
-    'Round {n}: Most players miss the last one. 🍭 #trivia #quiztok #mobilegames #challenge',
+    f'Round {{n}}: Can you get all three? {APP_STORE_CTA} {APP_STORE_URL} #MobileGames #TriviaGame #CandyFun #QuizChallenge',
+    f'Round {{n}}: Three questions. One perfect score. {APP_STORE_CTA} {APP_STORE_URL} #MobileGames #TriviaGame #CandyFun #QuizChallenge',
+    f'Round {{n}}: Most players miss the last one. {APP_STORE_CTA} {APP_STORE_URL} #MobileGames #TriviaGame #CandyFun #QuizChallenge',
 )
 
 def response_text(payload):
@@ -151,7 +154,10 @@ def generate(count=21, min_future_days=10, force=False):
         "snacks, candy brands, candy history, candy ingredients, candy manufacturing, or candy pop culture; "
         "do not create general geography, math, science, animal, capital-city, or app-category trivia. "
         "Verify every answer with web search and give its direct reputable source URL. Avoid trick questions, "
-        f"disputed facts, current officeholders, and these existing questions: {json.dumps(existing)}")
+        f"disputed facts, current officeholders, and these existing questions: {json.dumps(existing)} "
+        "Write the content for an energetic adult game-show host: short, playful, clear, and easy to narrate. "
+        "Each post is a three-question round with a quick hook, a guess moment, answer reveal, brief explanation, "
+        "and a closing prompt to download Trivia Candy Fun from the App Store.")
     facts = request_json(prompt, schema, 'candy_facts')['facts']
     seen={' '.join(x.casefold().split()) for x in existing}; outputs=[]; next_day=max(p['number'] for p in posts.values())+1; start=latest.date()+timedelta(days=1)
     for i in range(count):
@@ -174,8 +180,8 @@ def generate(count=21, min_future_days=10, force=False):
         seen.add(n)
     for i in range(count):
         qs=facts[i*3:i*3+3]
-        hour,template=SLOTS[0]; when=datetime.combine(start+timedelta(days=i),datetime.min.time(),TZ).replace(hour=hour)
-        data={'day':next_day+i,'q1':{k:qs[0][k] for k in ('question','answer')},'q2':{k:qs[1][k] for k in ('question','answer')},'q3':{**{k:qs[2][k] for k in ('question','answer')},'withhold':True},'caption':CAPTIONS[i%3].format(n=next_day+i),'scheduledAt':when.isoformat(),'meta':{'calendarDay':i+1,'slot':1,'format':'monthly-reviewed','goal':'growth','sources':[q['source_url'] for q in qs]},'visualTemplate':template}
+        hour,template=SLOTS[i % len(SLOTS)]; when=datetime.combine(start+timedelta(days=i),datetime.min.time(),TZ).replace(hour=hour)
+        data={'day':next_day+i,'appStoreUrl':APP_STORE_URL,'hook':'CAN YOU GO 3 FOR 3?','cta':APP_STORE_CTA,'narrationStyle':NARRATION_STYLE,'q1':{k:qs[0][k] for k in ('question','answer')},'q2':{k:qs[1][k] for k in ('question','answer')},'q3':{**{k:qs[2][k] for k in ('question','answer')},'withhold':True},'caption':CAPTIONS[i%3].format(n=next_day+i),'scheduledAt':when.isoformat(),'meta':{'calendarDay':i+1,'slot':1,'format':'monthly-reviewed','goal':'growth','sources':[q['source_url'] for q in qs],'appStoreUrl':APP_STORE_URL,'appStoreCta':APP_STORE_CTA,'narrationStyle':NARRATION_STYLE,'visualTemplate':template},'visualTemplate':template}
         path=ROOT/'examples'/'auto'/f'post-{next_day+i:03d}.json'
         if path.exists():
             raise CloudError('GENERATED_POST_ALREADY_EXISTS')

@@ -1,0 +1,38 @@
+{
+  "day": 59,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "What was the original shape of PEZ candy?",
+    "answer": "Round"
+  },
+  "q2": {
+    "question": "In what year was the first PEZ character head introduced?",
+    "answer": "1957"
+  },
+  "q3": {
+    "question": "Which character was the first licensed PEZ dispenser?",
+    "answer": "Popeye",
+    "withhold": true
+  },
+  "caption": "Your sweet challenge starts now. Can you finish the round with a perfect score? Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #CandyTrivia #FunApps #TriviaGame #MobileGames",
+  "scheduledAt": "2026-10-10T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 10,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://us.pez.com/pages/history",
+      "https://us.pez.com/pages/history",
+      "https://us.pez.com/pages/history"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "A"
+  },
+  "visualTemplate": "A",
+  "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077"
+}

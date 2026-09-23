@@ -1,0 +1,38 @@
+{
+  "day": 54,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "In what year was the Tootsie Roll introduced?",
+    "answer": "1896"
+  },
+  "q2": {
+    "question": "What was Tootsie Roll named after?",
+    "answer": "Leo Hirschfield daughter"
+  },
+  "q3": {
+    "question": "In what year was the Tootsie Pop invented?",
+    "answer": "1931",
+    "withhold": true
+  },
+  "caption": "Sweet facts, tricky questions, and one chance to go 3 for 3. Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #CandyFun #QuizChallenge #FunApps #TriviaGame",
+  "scheduledAt": "2026-10-05T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 5,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://tootsie.com/history/",
+      "https://shop.tootsie.com/pages/faqs",
+      "https://tootsie.com/history/"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "B"
+  },
+  "visualTemplate": "B",
+  "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077"
+}

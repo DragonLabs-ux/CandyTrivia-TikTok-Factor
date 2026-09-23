@@ -1,0 +1,38 @@
+{
+  "day": 53,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "What was KitKat originally called when launched in 1935?",
+    "answer": "Chocolate Crisp"
+  },
+  "q2": {
+    "question": "In what year did the KitKat name first appear?",
+    "answer": "1937"
+  },
+  "q3": {
+    "question": "When was Have a Break, Have a KitKat first used?",
+    "answer": "1958",
+    "withhold": true
+  },
+  "caption": "Lock in your answers before the reveal. Can you earn a perfect score? Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #TriviaGame #CandyTrivia #BrainGame #AppStore",
+  "scheduledAt": "2026-10-04T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 4,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://www.nestle.com/brands/chocolate-confectionery/kitkat",
+      "https://www.nestle.com/brands/chocolate-confectionery/kitkat",
+      "https://www.nestle.com/brands/chocolate-confectionery/kitkat"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "A"
+  },
+  "visualTemplate": "A",
+  "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077"
+}

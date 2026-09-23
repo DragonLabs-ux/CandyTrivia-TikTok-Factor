@@ -52,7 +52,7 @@ class ContentVerificationTests(unittest.TestCase):
                 content.verify_question_answers(self.facts)
 
     def test_weekly_slots_match_candy_posting_schedule(self):
-        self.assertEqual(((10, 'A'),), content.SLOTS)
+        self.assertEqual(((10, 'A'), (10, 'B'), (10, 'C')), content.SLOTS)
 
     def test_weekly_workflow_renders_real_campaign_post_id(self):
         workflow = Path('.github/workflows/candy-weekly-content.yml').read_text(encoding='utf-8')
