@@ -151,7 +151,7 @@ class R2State:
     def __init__(self, client=None):
         self.client = client or s3_client(state=True)
 
-    def load(self):
+    def load(self, allow_channel_mismatch=False):
         try:
             r = self.client.get_object(Bucket=STATE_BUCKET, Key=STATE_KEY)
             data = r['Body'].read(10_000_001)
@@ -159,7 +159,7 @@ class R2State:
                 raise CloudError('STATE_TOO_LARGE')
             state = json.loads(data)
             validate_state(state)
-            if state['channel_id'] != required('BUFFER_TIKTOK_CHANNEL_ID'):
+            if not allow_channel_mismatch and state['channel_id'] != required('BUFFER_TIKTOK_CHANNEL_ID'):
                 raise CloudError('CHANNEL_MISMATCH')
             return state, r['ETag']
         except CloudError:

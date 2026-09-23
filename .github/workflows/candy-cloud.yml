@@ -13,6 +13,7 @@ on:
           - status
           - dry-run
           - buffer-diagnostics
+          - rebind-channel
           - import-history
           - shadow
           - render-only
@@ -101,7 +102,7 @@ jobs:
             buffer-diagnostics)
               python buffer_diagnostics.py
               ;;
-            import-history|activate-canary|recover-canary-render|promote-live)
+            rebind-channel|import-history|activate-canary|recover-canary-render|promote-live)
               args=("$MODE")
               if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
               python candy_cloud_admin.py "${args[@]}"
