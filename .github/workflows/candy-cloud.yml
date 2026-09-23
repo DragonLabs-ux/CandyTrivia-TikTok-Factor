@@ -12,6 +12,7 @@ on:
         options:
           - status
           - dry-run
+          - rebind-channel
           - import-history
           - shadow
           - render-only
@@ -94,7 +95,7 @@ jobs:
         shell: bash
         run: |
           case "$MODE" in
-            import-history|activate-canary|recover-canary-render|promote-live)
+            rebind-channel|import-history|activate-canary|recover-canary-render|promote-live)
               args=("$MODE")
               if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
               python candy_cloud_admin.py "${args[@]}"

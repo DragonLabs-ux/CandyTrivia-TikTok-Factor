@@ -129,6 +129,28 @@ def sync_content():
     print(f'Approved content appended: {store.change(change)}')
 
 
+def rebind_channel(store):
+    if os.environ.get('CANDY_PUBLISHING_ENABLED', '').strip().lower() == 'true':
+        raise CloudError('DISABLE_PUBLISHING_BEFORE_CHANNEL_REBIND')
+    new_channel = required('BUFFER_TIKTOK_CHANNEL_ID')
+    Buffer().channel_check()
+    state, etag = store.load(allow_channel_mismatch=True)
+    old_channel = state['channel_id']
+    if old_channel == new_channel:
+        print('Channel binding already matches the configured Buffer channel.')
+        return
+    blocked = [key for key, post in state['posts'].items()
+               if post.get('status') in {'SUBMITTING', 'UNCERTAIN', 'RENDERING'}]
+    if blocked:
+        raise CloudError('RESOLVE_IN_FLIGHT_POSTS_BEFORE_CHANNEL_REBIND')
+    state['channel_id'] = new_channel
+    state['previous_channel_id'] = old_channel
+    state['channel_rebound_at'] = now_iso()
+    event(state, 'channel_rebound', new_channel)
+    store.save(state, etag)
+    print('Rebound durable state to the verified Candy TikTok Buffer channel.')
+
+
 def gh(args, value=None):
     result = subprocess.run(['gh', *args], input=value, text=True, encoding='utf-8',
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -217,7 +239,7 @@ def recover_canary_render(store, post_id):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command', choices=['configure-github', 'import-history', 'sync-content', 'freeze-local',
+    p.add_argument('command', choices=['configure-github', 'import-history', 'sync-content', 'rebind-channel', 'freeze-local',
                                        'activate-canary', 'recover-canary-render', 'promote-live'])
     p.add_argument('--post')
     args = p.parse_args(argv)
@@ -232,6 +254,8 @@ def main(argv=None):
             initialize()
         elif args.command == 'sync-content':
             sync_content()
+        elif args.command == 'rebind-channel':
+            rebind_channel(R2State())
         elif args.command == 'activate-canary':
             activate(R2State(), args.post)
         elif args.command == 'recover-canary-render':
