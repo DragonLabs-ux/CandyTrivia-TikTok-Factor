@@ -1,0 +1,37 @@
+{
+  "day": 51,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "In what year were plain chocolate M&M candies introduced?",
+    "answer": "1941"
+  },
+  "q2": {
+    "question": "What letter was added to M&M candies in 1950?",
+    "answer": "M"
+  },
+  "q3": {
+    "question": "In what year were peanut M&M candies introduced?",
+    "answer": "1954",
+    "withhold": true
+  },
+  "caption": "Three candy questions. One sweet challenge. How many can you get right? Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #CandyTrivia #TriviaGame #SweetChallenge #MobileGames",
+  "scheduledAt": "2026-10-02T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 2,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://www.mms.com/en-it/explore/about-us",
+      "https://www.mms.com/en-it/explore/about-us",
+      "https://www.mms.com/pl-es/odkryj-mms/o-mms"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "B"
+  },
+  "visualTemplate": "B"
+}

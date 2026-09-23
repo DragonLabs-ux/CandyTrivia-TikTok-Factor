@@ -1,0 +1,37 @@
+{
+  "day": 50,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "In what year was PEZ introduced in Vienna?",
+    "answer": "1927"
+  },
+  "q2": {
+    "question": "What German word inspired the name PEZ?",
+    "answer": "Pfefferminz"
+  },
+  "q3": {
+    "question": "In what year was the first PEZ dispenser introduced?",
+    "answer": "1949",
+    "withhold": true
+  },
+  "caption": "Can you go 3 for 3? Lock in your candy answers and see if you can beat the round. Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #TriviaGame #QuizChallenge #CandyFun #MobileGames",
+  "scheduledAt": "2026-10-01T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 1,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://us.pez.com/pages/fun-facts",
+      "https://us.pez.com/pages/fun-facts",
+      "https://us.pez.com/pages/history"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "A"
+  },
+  "visualTemplate": "A"
+}

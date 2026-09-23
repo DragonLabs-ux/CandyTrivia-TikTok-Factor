@@ -1,0 +1,37 @@
+{
+  "day": 57,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "In what year was the MILKY WAY Bar created?",
+    "answer": "1923"
+  },
+  "q2": {
+    "question": "What drink inspired the MILKY WAY Bar?",
+    "answer": "A malted milkshake"
+  },
+  "q3": {
+    "question": "In what year was the MARS Bar created?",
+    "answer": "1932",
+    "withhold": true
+  },
+  "caption": "Game-show mode: activated. Can you clear this three-question candy round? Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #TriviaGame #AppStore #CandyTrivia #QuizChallenge",
+  "scheduledAt": "2026-10-08T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 8,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://www.mars.com/our-brands/mars-snacking",
+      "https://www.mars.com/our-brands/mars-snacking",
+      "https://www.mars.com/our-brands/mars-snacking"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "B"
+  },
+  "visualTemplate": "B"
+}

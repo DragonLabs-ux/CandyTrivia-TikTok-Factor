@@ -1,0 +1,37 @@
+{
+  "day": 55,
+  "hook": "CAN YOU GO 3 FOR 3?",
+  "cta": "Download Trivia Candy Fun on the App Store.",
+  "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+  "q1": {
+    "question": "In what year was the first SNICKERS Bar made?",
+    "answer": "1930"
+  },
+  "q2": {
+    "question": "What was the SNICKERS Bar allegedly named after?",
+    "answer": "A horse"
+  },
+  "q3": {
+    "question": "What was SNICKERS called in the UK from 1967 to 1990?",
+    "answer": "Marathon",
+    "withhold": true
+  },
+  "caption": "Ready for a candy knowledge showdown? Comment your score after the final reveal. Download Trivia Candy Fun on the App Store: https://apps.apple.com/us/app/trivia-candy-fun/id6768475077 #MobileGames #CandyTrivia #QuizChallenge #TriviaGame",
+  "scheduledAt": "2026-10-06T10:00:00-07:00",
+  "meta": {
+    "calendarDay": 6,
+    "slot": 1,
+    "format": "monthly-reviewed",
+    "goal": "app-downloads",
+    "sources": [
+      "https://www.snickers.com/our-story",
+      "https://www.snickers.com/our-story",
+      "https://www.snickers.com/our-story"
+    ],
+    "appStoreUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "appStoreCta": "Download Trivia Candy Fun on the App Store.",
+    "narrationStyle": "Energetic adult game-show host with a fun, friendly delivery.",
+    "visualTemplate": "C"
+  },
+  "visualTemplate": "C"
+}
