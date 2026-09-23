@@ -181,7 +181,7 @@ def generate(count=21, min_future_days=10, force=False):
     for i in range(count):
         qs=facts[i*3:i*3+3]
         hour,template=SLOTS[i % len(SLOTS)]; when=datetime.combine(start+timedelta(days=i),datetime.min.time(),TZ).replace(hour=hour)
-        data={'day':next_day+i,'hook':'CAN YOU GO 3 FOR 3?','cta':APP_STORE_CTA,'narrationStyle':NARRATION_STYLE,'q1':{k:qs[0][k] for k in ('question','answer')},'q2':{k:qs[1][k] for k in ('question','answer')},'q3':{**{k:qs[2][k] for k in ('question','answer')},'withhold':True},'caption':CAPTIONS[i%3].format(n=next_day+i),'scheduledAt':when.isoformat(),'meta':{'calendarDay':i+1,'slot':1,'format':'monthly-reviewed','goal':'growth','sources':[q['source_url'] for q in qs],'appStoreUrl':APP_STORE_URL,'appStoreCta':APP_STORE_CTA,'narrationStyle':NARRATION_STYLE,'visualTemplate':template},'visualTemplate':template}
+        data={'day':next_day+i,'appStoreUrl':APP_STORE_URL,'hook':'CAN YOU GO 3 FOR 3?','cta':APP_STORE_CTA,'narrationStyle':NARRATION_STYLE,'q1':{k:qs[0][k] for k in ('question','answer')},'q2':{k:qs[1][k] for k in ('question','answer')},'q3':{**{k:qs[2][k] for k in ('question','answer')},'withhold':True},'caption':CAPTIONS[i%3].format(n=next_day+i),'scheduledAt':when.isoformat(),'meta':{'calendarDay':i+1,'slot':1,'format':'monthly-reviewed','goal':'growth','sources':[q['source_url'] for q in qs],'appStoreUrl':APP_STORE_URL,'appStoreCta':APP_STORE_CTA,'narrationStyle':NARRATION_STYLE,'visualTemplate':template},'visualTemplate':template}
         path=ROOT/'examples'/'auto'/f'post-{next_day+i:03d}.json'
         if path.exists():
             raise CloudError('GENERATED_POST_ALREADY_EXISTS')

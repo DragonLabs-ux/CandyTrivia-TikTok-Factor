@@ -66,6 +66,7 @@ const CoverSchema = z.object({
 
 export const TriviaDaySchema = z.object({
   day: z.number().int().positive(),
+  appStoreUrl: z.string().url().optional(),
   postId: z.union([z.string().trim().min(1).max(80), z.number().int().positive()]).optional(),
   visualTemplate: z.enum(['A', 'B', 'C']).optional(),
   hook: z.string().trim().min(1).max(90).optional(),
@@ -159,7 +160,8 @@ const validatePublicContent = (day: TriviaDay) => {
   if (hashtags.length !== 4) {
     throw new Error(`Caption must contain exactly 4 hashtags; found ${hashtags.length}`);
   }
-  if (!day.caption.includes('https://apps.apple.com/us/app/trivia-candy-fun/id6768475077')) {
+  if (day.appStoreUrl === 'https://apps.apple.com/us/app/trivia-candy-fun/id6768475077'
+      && !day.caption.includes(day.appStoreUrl)) {
     throw new Error('Caption must include the official Trivia Candy Fun App Store link');
   }
   const secret = day.q3.answer.trim().toLocaleLowerCase();
