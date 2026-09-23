@@ -32,6 +32,7 @@ STATE_BUCKET = 'candy-trivia-control'
 STATE_KEY = 'publisher/v1/state.json'
 CAMPAIGN = 'candy-premium-2026-09'
 DELIVERY_STATES = {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED', 'SENT', 'HISTORICAL', 'BLOCKED', 'DRAFT_READY'}
+MONTHLY_POST_LIMIT = 10
 VISUAL_ROOT = ROOT / 'public' / 'visuals' / 'candy-v1'
 VISUAL_MANIFEST = VISUAL_ROOT / 'manifest.json'
 COVER_CATALOG = VISUAL_ROOT / 'covers.json'
@@ -269,6 +270,34 @@ def compact_post(row):
     return {k: v for k, v in row.items() if k != 'data'}
 
 
+def posting_month(value):
+    return dt(value).astimezone(TZ).strftime('%Y-%m')
+
+
+def monthly_entry(state, month):
+    entries = state.setdefault('monthly_posting', {})
+    entry = entries.setdefault(month, {'successful': 0, 'probe_attempted': False,
+                                      'probe_accepted': False, 'probe_post_id': None,
+                                      'probe_error': None})
+    if not entry.get('initialized'):
+        entry['successful'] = sum(
+            1 for post in state.get('posts', {}).values()
+            if posting_month(post['scheduled_at']) == month
+            and post.get('status') in {'SCHEDULED', 'SENT'}
+        )
+        entry['initialized'] = True
+    return entry
+
+
+def monthly_post_allowed(state, post):
+    entry = monthly_entry(state, posting_month(post['scheduled_at']))
+    if entry['successful'] < MONTHLY_POST_LIMIT:
+        return True
+    if not entry.get('probe_attempted'):
+        return True
+    return bool(entry.get('probe_accepted'))
+
+
 def new_state(posts, channel):
     return {'version': 1, 'channel_id': channel, 'mode': 'shadow', 'paused': False,
         'history_imported': False, 'local_disabled': False, 'shadow_runs': [],
@@ -290,7 +319,8 @@ def candidates(state, posts, now, horizon=72):
         if status == 'RENDERING' and existing.get('lease_until', 0) < now.timestamp():
             status = 'APPROVED'  # No Buffer submission has been allowed yet.
         if status in {'APPROVED', 'FAILED_RENDER'} and existing.get('render_attempts', 0) < 3:
-            chosen.append(item)
+            if monthly_post_allowed(state, item):
+                chosen.append(item)
     return sorted(chosen, key=lambda row: dt(row['scheduled_at']))
 
 
@@ -302,6 +332,15 @@ def claim(store, post, owner, now):
             raise CloudError('SHADOW_MODE')
         if s['mode'] == 'canary' and s.get('canary_id') != post['id']:
             raise CloudError('NOT_CANARY_POST')
+        month = posting_month(post['scheduled_at'])
+        monthly = monthly_entry(s, month)
+        if monthly['successful'] >= MONTHLY_POST_LIMIT:
+            if monthly.get('probe_attempted') and not monthly.get('probe_accepted'):
+                raise CloudError('MONTHLY_POSTING_CAP_REACHED')
+            if not monthly.get('probe_attempted'):
+                monthly['probe_attempted'] = True
+                monthly['probe_post_id'] = post['id']
+                event(s, 'monthly_cap_probe_started', post['id'])
         p = s['posts'][post['id']]
         allowed = p['status'] in {'APPROVED', 'FAILED_RENDER'} or (
             p['status'] == 'RENDERING' and p.get('lease_until', 0) < now.timestamp())
@@ -342,8 +381,20 @@ def record_result(store, post_id, owner, result=None):
                 p['buffer_ids'].append(result['id'])
             status = 'SENT' if result.get('status') == 'sent' else 'SCHEDULED' if result.get('status') == 'scheduled' else 'BLOCKED'
             p.update(status=status, buffer_post_id=result['id'], due_at=result.get('dueAt'), sent_at=result.get('sentAt'))
+            month = posting_month(p['scheduled_at'])
+            monthly = monthly_entry(s, month)
+            if monthly['successful'] < MONTHLY_POST_LIMIT:
+                monthly['successful'] += 1
+            elif monthly.get('probe_post_id') == post_id:
+                monthly['probe_accepted'] = True
+                event(s, 'monthly_cap_probe_accepted', post_id)
         else:
             p['status'] = 'UNCERTAIN'
+            month = posting_month(p['scheduled_at'])
+            monthly = monthly_entry(s, month)
+            if monthly.get('probe_post_id') == post_id:
+                monthly['probe_error'] = 'BUFFER_SUBMISSION_FAILED'
+                event(s, 'monthly_cap_probe_rejected', post_id)
         p['attempts'][-1]['status'] = p['status']
         event(s, p['status'].lower(), post_id)
     store.change(change)
