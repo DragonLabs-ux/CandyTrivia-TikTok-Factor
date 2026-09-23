@@ -937,10 +937,13 @@ def report(state, posts, planned=None):
                    and key in posts and candy_themed(posts[key]['data'])}
     x_statuses = Counter((p.get('x_promo') or {}).get('status') for p in state['posts'].values()
                          if (p.get('x_promo') or {}).get('status'))
+    current_month = datetime.now(TZ).strftime('%Y-%m')
+    monthly = dict(state.get('monthly_posting', {}).get(current_month, {}))
     value = {'mode': state.get('mode'), 'paused': state.get('paused'),
         'statuses': dict(Counter(p['status'] for p in state['posts'].values())),
         'x_promo_enabled': x_promotion_enabled(), 'x_promo_statuses': dict(x_statuses),
         'future_content_days': len(future_days), 'content_low': len(future_days) < 7,
+        'monthly_posting': {'month': current_month, **monthly},
         'would_process': [p['id'] for p in planned or []],
         'attention': [p['id'] for p in state['posts'].values() if p['status'] in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}
                       or (p.get('x_promo') or {}).get('status') in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}],
