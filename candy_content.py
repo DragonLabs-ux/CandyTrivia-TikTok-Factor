@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from candy_cloud import ROOT, TZ, CloudError, candy_themed, load_campaign
 
-SLOTS = ((9, 'A'), (15, 'A'), (19, 'B'))
+SLOTS = ((10, 'A'),)
 CAPTIONS = (
     'Round {n}: Can you get all three? 🍭 #trivia #quiztok #mobilegames #iphone',
     'Round {n}: Three questions. One perfect score. 🍬 #trivia #quiztok #braingames #iphone',
@@ -174,8 +174,8 @@ def generate(count=21, min_future_days=10, force=False):
         seen.add(n)
     for i in range(count):
         qs=facts[i*3:i*3+3]
-        hour,template=SLOTS[i%3]; when=datetime.combine(start+timedelta(days=i//3),datetime.min.time(),TZ).replace(hour=hour)
-        data={'day':next_day+i,'q1':{k:qs[0][k] for k in ('question','answer')},'q2':{k:qs[1][k] for k in ('question','answer')},'q3':{**{k:qs[2][k] for k in ('question','answer')},'withhold':True},'caption':CAPTIONS[i%3].format(n=next_day+i),'scheduledAt':when.isoformat(),'meta':{'calendarDay':i//3+1,'slot':i%3+1,'format':'weekly-reviewed','goal':'growth','sources':[q['source_url'] for q in qs]},'visualTemplate':template}
+        hour,template=SLOTS[0]; when=datetime.combine(start+timedelta(days=i),datetime.min.time(),TZ).replace(hour=hour)
+        data={'day':next_day+i,'q1':{k:qs[0][k] for k in ('question','answer')},'q2':{k:qs[1][k] for k in ('question','answer')},'q3':{**{k:qs[2][k] for k in ('question','answer')},'withhold':True},'caption':CAPTIONS[i%3].format(n=next_day+i),'scheduledAt':when.isoformat(),'meta':{'calendarDay':i+1,'slot':1,'format':'monthly-reviewed','goal':'growth','sources':[q['source_url'] for q in qs]},'visualTemplate':template}
         path=ROOT/'examples'/'auto'/f'post-{next_day+i:03d}.json'
         if path.exists():
             raise CloudError('GENERATED_POST_ALREADY_EXISTS')
