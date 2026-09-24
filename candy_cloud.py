@@ -724,17 +724,26 @@ def ensure_thumbnail(post):
     if result.returncode:
         raise CloudError('THUMBNAIL_RENDER_FAILED')
     try:
-        covers = json.loads(result.stdout.decode('utf-8')).get('covers', [])
-        if not covers:
-            raise OSError('cover output not reported')
-        proof = Path(covers[0])
+        output = result.stdout.decode('utf-8')
+        covers = []
+        decoder = json.JSONDecoder()
+        for match in re.finditer(r'\\{', output):
+            try:
+                payload, _ = decoder.raw_decode(output[match.start():])
+            except ValueError:
+                continue
+            if isinstance(payload, dict) and isinstance(payload.get('covers'), list):
+                covers = payload['covers']
+                break
+        proof = Path(covers[0]) if covers else (
+            ROOT / 'out' / 'review' / 'covers' / f"post-{post['number']:03d}-cover.png")
         if not proof.is_absolute():
             proof = ROOT / proof
         thumbnail = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}-cover.png"
         thumbnail.parent.mkdir(parents=True, exist_ok=True)
         thumbnail.write_bytes(proof.read_bytes())
-    except (KeyError, TypeError, ValueError, UnicodeDecodeError, OSError):
-        raise CloudError('THUMBNAIL_MISSING') from None
+    except (IndexError, TypeError, UnicodeDecodeError, OSError):
+        raise CloudError('THUMBNAIL_PROOF_MISSING') from None
     return validate_thumbnail(post)
 
 
