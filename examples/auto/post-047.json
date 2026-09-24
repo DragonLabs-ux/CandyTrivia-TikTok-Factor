@@ -1,0 +1,32 @@
+{
+  "day": 47,
+  "q1": {
+    "question": "Which candy brand is famous for gummy bears?",
+    "answer": "Haribo",
+    "answers": ["Haribo", "Skittles", "M&M's", "Twizzlers"]
+  },
+  "q2": {
+    "question": "Which chewy candy is sold as individually wrapped fruit-flavored squares?",
+    "answer": "Starburst",
+    "answers": ["Starburst", "Kit Kat", "Reese's", "Whoppers"]
+  },
+  "q3": {
+    "question": "Which candy is built around a lollipop with bubble gum in the center?",
+    "answer": "Blow Pop",
+    "withhold": true
+  },
+  "caption": "Fast candy quiz. Save this if you went 3 for 3. #trivia #candy #quiztok #sweetfacts",
+  "scheduledAt": "2026-09-17T09:00:00-07:00",
+  "meta": {
+    "calendarDay": 17,
+    "slot": 1,
+    "format": "manual-candy-trivia",
+    "goal": "review-buffer-refill",
+    "sources": [
+      "https://www.haribo.com/en-us/products/haribo/goldbears",
+      "https://www.starburst.com/",
+      "https://www.tootsie.com/candy/blow-pops"
+    ]
+  },
+  "visualTemplate": "A"
+}

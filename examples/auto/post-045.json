@@ -1,0 +1,32 @@
+{
+  "day": 45,
+  "q1": {
+    "question": "Reese's Peanut Butter Cups are part of which company?",
+    "answer": "Hershey",
+    "answers": ["Mars", "Ferrero", "Hershey", "Haribo"]
+  },
+  "q2": {
+    "question": "Which brand makes the chocolate-hazelnut candy Ferrero Rocher?",
+    "answer": "Ferrero",
+    "answers": ["Ferrero", "Mars", "Nestle", "Lindt"]
+  },
+  "q3": {
+    "question": "What shape is a classic Hershey's Kiss?",
+    "answer": "Teardrop",
+    "withhold": true
+  },
+  "caption": "Sweet facts, quick quiz. Drop your score. #candy #trivia #quiztok #snackfacts",
+  "scheduledAt": "2026-09-16T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 16,
+    "slot": 2,
+    "format": "manual-candy-trivia",
+    "goal": "review-buffer-refill",
+    "sources": [
+      "https://www.hersheyland.com/reeses",
+      "https://www.ferrerorocher.com/us/en/",
+      "https://www.hersheyland.com/kisses"
+    ]
+  },
+  "visualTemplate": "A"
+}

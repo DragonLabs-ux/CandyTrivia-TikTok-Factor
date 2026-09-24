@@ -12,6 +12,7 @@ on:
         options:
           - status
           - dry-run
+          - buffer-diagnostics
           - rebind-channel
           - import-history
           - shadow
@@ -19,12 +20,14 @@ on:
           - activate-canary
           - recover-canary-render
           - canary
+          - direct-draft
+          - metricool-media
           - promote-live
           - refill
           - analytics
           - pause
       post:
-        description: Exact post ID for render-only or canary (candy-premium-2026-09:010)
+        description: Exact post ID for render-only, canary, direct-draft, or metricool-media (candy-premium-2026-09:010)
         type: string
         required: false
 
@@ -65,6 +68,7 @@ jobs:
       TTS_VOICE: en-US-AvaNeural
       TTS_RATE: +8%
       TTS_PITCH: +0Hz
+      CANDY_HANDOFF_DIR: out/handoff
 
     steps:
       - uses: actions/checkout@v4
@@ -80,12 +84,12 @@ jobs:
           python -m unittest discover -s tests -v
           python candy_cloud_check.py
       - uses: actions/setup-node@v4
-        if: contains(fromJSON('["render-only","refill","canary"]'), env.MODE)
+        if: contains(fromJSON('["render-only","refill","canary","direct-draft","metricool-media"]'), env.MODE)
         with:
           node-version: '24'
           cache: npm
       - name: Install renderer and validation tools
-        if: contains(fromJSON('["render-only","refill","canary"]'), env.MODE)
+        if: contains(fromJSON('["render-only","refill","canary","direct-draft","metricool-media"]'), env.MODE)
         run: |
           npm ci
           npm run typecheck
@@ -95,6 +99,9 @@ jobs:
         shell: bash
         run: |
           case "$MODE" in
+            buffer-diagnostics)
+              python buffer_diagnostics.py
+              ;;
             rebind-channel|import-history|activate-canary|recover-canary-render|promote-live)
               args=("$MODE")
               if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
@@ -109,10 +116,17 @@ jobs:
               python candy_cloud.py "${args[@]}"
               ;;
           esac
+      - name: Upload scheduling handoff
+        if: always() && contains(fromJSON('["direct-draft","metricool-media"]'), env.MODE)
+        uses: actions/upload-artifact@v4
+        with:
+          name: candy-${{ env.MODE }}-${{ github.run_number }}
+          path: out/handoff/*.json
+          if-no-files-found: warn
       - name: Collect due 1h 24h and 72h analytics checkpoints
         if: github.event_name == 'schedule' && env.MODE != 'analytics'
         run: python candy_metrics.py
       - name: Failure guidance
         if: failure()
         run: |
-          echo 'Candy needs attention. Inspect the sanitized error above. Never rerun an uncertain Buffer submission without reconciliation.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Candy needs attention. Inspect the sanitized error above. Never rerun an uncertain Buffer or direct draft handoff without reconciliation.' >> "$GITHUB_STEP_SUMMARY"

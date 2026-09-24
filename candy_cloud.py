@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GitHub runner: approved JSON -> Remotion -> R2 -> Buffer -> TikTok.
+"""GitHub runner: approved JSON -> Remotion -> R2 -> Buffer/direct TikTok handoff.
 
 The private R2 state object is authoritative. Every state change is conditional
 on its ETag; missing/corrupt state fails closed. Buffer POSTs are NEVER retried.
@@ -31,7 +31,8 @@ PUBLIC_MEDIA_USER_AGENT = 'Mozilla/5.0 (compatible; CandyTriviaMediaValidator/1.
 STATE_BUCKET = 'candy-trivia-control'
 STATE_KEY = 'publisher/v1/state.json'
 CAMPAIGN = 'candy-premium-2026-09'
-DELIVERY_STATES = {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED', 'SENT', 'HISTORICAL', 'BLOCKED'}
+DELIVERY_STATES = {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED', 'SENT', 'HISTORICAL', 'BLOCKED', 'DRAFT_READY'}
+MONTHLY_POST_LIMIT = 10
 VISUAL_ROOT = ROOT / 'public' / 'visuals' / 'candy-v1'
 VISUAL_MANIFEST = VISUAL_ROOT / 'manifest.json'
 COVER_CATALOG = VISUAL_ROOT / 'covers.json'
@@ -40,6 +41,13 @@ THUMBNAIL_OFFSET_MS = 1000
 TIKTOK_COMMERCIAL_MODE = 'own_brand'
 TIKTOK_SCHEDULING_TYPE = 'notification'
 DEFAULT_PROMO_APP_URL = 'https://apps.apple.com/us/app/trivia-candy-fun/id6768475077'
+CANDY_TERMS = {
+    'airheads', 'almond joy', 'baby ruth', 'butterfinger', 'candy', 'caramel', 'charleston chew',
+    'chocolate', 'gobstopper', 'gummy', 'haribo', 'heath', 'hershey', 'jelly bean', 'kit kat',
+    'lifesavers', 'lollipop', 'm&m', "m&m's", 'm&ms', 'mounds', 'nerds', 'peppermint patty', 'pez', 'reese', "reese's",
+    'skittles', 'smarties', 'snickers', 'sour patch', 'starburst', 'sweetarts', 'taffy',
+    'tootsie', 'twix', 'whoppers', 'wonka'
+}
 
 
 def public_media_request(url):
@@ -205,6 +213,19 @@ def event(state, name, post_id=None):
     state['events'] = state['events'][-500:]
 
 
+def has_candy_term(value):
+    text = ' '.join(str(value).casefold().replace('’', "'").split())
+    return any(term in text for term in CANDY_TERMS)
+
+
+def candy_themed(data):
+    try:
+        return all(has_candy_term(data[slot].get('question', '') + ' ' + data[slot].get('answer', ''))
+                   for slot in ('q1', 'q2', 'q3'))
+    except (AttributeError, KeyError):
+        return False
+
+
 def load_campaign():
     posts = {}
     questions, decks = set(), set()
@@ -249,6 +270,34 @@ def compact_post(row):
     return {k: v for k, v in row.items() if k != 'data'}
 
 
+def posting_month(value):
+    return dt(value).astimezone(TZ).strftime('%Y-%m')
+
+
+def monthly_entry(state, month):
+    entries = state.setdefault('monthly_posting', {})
+    entry = entries.setdefault(month, {'successful': 0, 'probe_attempted': False,
+                                      'probe_accepted': False, 'probe_post_id': None,
+                                      'probe_error': None})
+    if not entry.get('initialized'):
+        entry['successful'] = sum(
+            1 for post in state.get('posts', {}).values()
+            if posting_month(post['scheduled_at']) == month
+            and post.get('status') in {'SCHEDULED', 'SENT'}
+        )
+        entry['initialized'] = True
+    return entry
+
+
+def monthly_post_allowed(state, post):
+    entry = monthly_entry(state, posting_month(post['scheduled_at']))
+    if entry['successful'] < MONTHLY_POST_LIMIT:
+        return True
+    if not entry.get('probe_attempted'):
+        return True
+    return bool(entry.get('probe_accepted'))
+
+
 def new_state(posts, channel):
     return {'version': 1, 'channel_id': channel, 'mode': 'shadow', 'paused': False,
         'history_imported': False, 'local_disabled': False, 'shadow_runs': [],
@@ -258,6 +307,8 @@ def new_state(posts, channel):
 def candidates(state, posts, now, horizon=72):
     chosen = []
     for key, item in posts.items():
+        if not candy_themed(item['data']):
+            continue
         existing = state['posts'].get(key)
         if not existing or existing['approved_hash'] != item['approved_hash']:
             continue  # New/changed content requires explicit reviewed import.
@@ -268,7 +319,8 @@ def candidates(state, posts, now, horizon=72):
         if status == 'RENDERING' and existing.get('lease_until', 0) < now.timestamp():
             status = 'APPROVED'  # No Buffer submission has been allowed yet.
         if status in {'APPROVED', 'FAILED_RENDER'} and existing.get('render_attempts', 0) < 3:
-            chosen.append(item)
+            if monthly_post_allowed(state, item):
+                chosen.append(item)
     return sorted(chosen, key=lambda row: dt(row['scheduled_at']))
 
 
@@ -280,6 +332,15 @@ def claim(store, post, owner, now):
             raise CloudError('SHADOW_MODE')
         if s['mode'] == 'canary' and s.get('canary_id') != post['id']:
             raise CloudError('NOT_CANARY_POST')
+        month = posting_month(post['scheduled_at'])
+        monthly = monthly_entry(s, month)
+        if monthly['successful'] >= MONTHLY_POST_LIMIT:
+            if monthly.get('probe_attempted') and not monthly.get('probe_accepted'):
+                raise CloudError('MONTHLY_POSTING_CAP_REACHED')
+            if not monthly.get('probe_attempted'):
+                monthly['probe_attempted'] = True
+                monthly['probe_post_id'] = post['id']
+                event(s, 'monthly_cap_probe_started', post['id'])
         p = s['posts'][post['id']]
         allowed = p['status'] in {'APPROVED', 'FAILED_RENDER'} or (
             p['status'] == 'RENDERING' and p.get('lease_until', 0) < now.timestamp())
@@ -320,10 +381,40 @@ def record_result(store, post_id, owner, result=None):
                 p['buffer_ids'].append(result['id'])
             status = 'SENT' if result.get('status') == 'sent' else 'SCHEDULED' if result.get('status') == 'scheduled' else 'BLOCKED'
             p.update(status=status, buffer_post_id=result['id'], due_at=result.get('dueAt'), sent_at=result.get('sentAt'))
+            month = posting_month(p['scheduled_at'])
+            monthly = monthly_entry(s, month)
+            if monthly['successful'] < MONTHLY_POST_LIMIT:
+                monthly['successful'] += 1
+            elif monthly.get('probe_post_id') == post_id:
+                monthly['probe_accepted'] = True
+                event(s, 'monthly_cap_probe_accepted', post_id)
         else:
             p['status'] = 'UNCERTAIN'
+            month = posting_month(p['scheduled_at'])
+            monthly = monthly_entry(s, month)
+            if monthly.get('probe_post_id') == post_id:
+                monthly['probe_error'] = 'BUFFER_SUBMISSION_FAILED'
+                event(s, 'monthly_cap_probe_rejected', post_id)
         p['attempts'][-1]['status'] = p['status']
         event(s, p['status'].lower(), post_id)
+    store.change(change)
+
+
+def record_direct_draft_ready(store, post, owner, video):
+    def change(s):
+        p = s['posts'][post['id']]
+        if p.get('owner') != owner or p['status'] != 'RENDERING':
+            raise CloudError('SUBMISSION_STATE_CHANGED')
+        video_hash = video.get('sha256') or digest({k: video.get(k) for k in ('url', 'key', 'bytes')})
+        p.update(status='DRAFT_READY', video=video, direct_draft={
+            'media_url': video['url'],
+            'caption': post['data']['caption'],
+            'scheduled_at': post['scheduled_at'],
+            'prepared_at': now_iso(),
+        })
+        p.setdefault('attempts', []).append({'id': owner, 'at': now_iso(),
+            'status': 'DRAFT_READY', 'video_hash': video_hash, 'channel': 'tiktok_direct_draft'})
+        event(s, 'draft_ready', post['id'])
     store.change(change)
 
 
@@ -679,6 +770,26 @@ def render_key(post):
         'voice': ['en-US-AvaNeural', '+8%', '+0Hz'], 'pipeline': 'cloud-v1'})
 
 
+def public_handoff(name, handoff):
+    out_dir = os.environ.get('CANDY_HANDOFF_DIR', '').strip()
+    safe = dict(handoff)
+    if safe.get('media_url'):
+        safe['media_url'] = '[full URL saved in workflow artifact]'
+    print(json.dumps({name: safe}, indent=2))
+    if path := os.environ.get('GITHUB_STEP_SUMMARY'):
+        with open(path, 'a', encoding='utf-8') as f:
+            f.write(name.replace('_', ' ').title() + '\n\n```json\n' + json.dumps(safe, indent=2) + '\n```\n')
+    if out_dir:
+        target = Path(out_dir)
+        if not target.is_absolute():
+            target = ROOT / target
+        target.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r'[^A-Za-z0-9._-]+', '-', str(handoff.get('post_id', name))).strip('-')
+        payload = {name: handoff}
+        (target / f'{name}-{slug}.json').write_text(json.dumps(payload, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+        (target / f'{name}-latest.json').write_text(json.dumps(payload, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+
 def cached_media(store, post):
     state, _ = store.load()
     video = state['posts'][post['id']].get('cached_video')
@@ -744,6 +855,57 @@ def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=ca
         schedule_x_promotion(store, x_channel or x_buffer(), post, video)
 
 
+def prepare_direct_draft(store, post, render_fn=render, upload_fn=upload, cache_fn=cached_media):
+    if not candy_themed(post['data']):
+        raise CloudError('NOT_CANDY_THEMED')
+    owner = uuid.uuid4().hex
+    claim(store, post, owner, datetime.now(timezone.utc))
+    stage = 'media'
+    try:
+        video = cache_fn(store, post) or upload_fn(post, render_fn(post))
+        video['render_key'] = render_key(post)
+        stage = 'draft_ready'
+        record_direct_draft_ready(store, post, owner, video)
+    except Exception as exc:
+        def failed(s):
+            p = s['posts'][post['id']]
+            if p['status'] == 'RENDERING' and p.get('owner') == owner:
+                p.update(status='FAILED_RENDER', error='PRE_DIRECT_DRAFT_FAILED')
+        store.change(failed)
+        if isinstance(exc, CloudError):
+            raise
+        raise CloudError('PRE_DIRECT_DRAFT_' + stage.upper() + '_FAILED') from None
+    handoff = {'post_id': post['id'], 'media_url': video['url'], 'caption': post['data']['caption'],
+               'media_key': video.get('key'), 'scheduled_at': post['scheduled_at'],
+               'direct_step': 'tiktok_prepare_draft_upload'}
+    public_handoff('direct_tiktok_draft', handoff)
+    return handoff
+
+
+def prepare_metricool_media(store, post, render_fn=render, upload_fn=upload, cache_fn=cached_media):
+    if not candy_themed(post['data']):
+        raise CloudError('NOT_CANDY_THEMED')
+    state, _ = store.load()
+    existing = state['posts'].get(post['id'])
+    if not existing or existing.get('approved_hash') != post['approved_hash']:
+        raise CloudError('APPROVED_CONTENT_CHANGED')
+    video = cache_fn(store, post) or upload_fn(post, render_fn(post))
+    video['render_key'] = render_key(post)
+    def remember(s):
+        p = s['posts'][post['id']]
+        if p.get('approved_hash') != post['approved_hash']:
+            raise CloudError('APPROVED_CONTENT_CHANGED')
+        p['cached_video'] = video
+        event(s, 'metricool_media_ready', post['id'])
+    store.change(remember)
+    handoff = {'post_id': post['id'], 'media_url': video['url'], 'caption': post['data']['caption'],
+               'media_key': video.get('key'), 'scheduled_at': post['scheduled_at'],
+               'metricool_brand_id': os.environ.get('METRICOOL_BRAND_ID', ''),
+               'direct_step': 'metricool_schedule_tiktok'}
+    public_handoff('metricool_media', handoff)
+    return handoff
+
+
 def analytics(store, buffer):
     state, _ = store.load()
     collected = {}
@@ -770,14 +932,18 @@ def analytics(store, buffer):
 
 def report(state, posts, planned=None):
     now = datetime.now(timezone.utc)
-    future_days = {dt(p['scheduled_at']).astimezone(TZ).date() for p in state['posts'].values()
-                   if dt(p['scheduled_at']) > now and p['status'] in {'APPROVED', 'SCHEDULED'}}
+    future_days = {dt(p['scheduled_at']).astimezone(TZ).date() for key, p in state['posts'].items()
+                   if dt(p['scheduled_at']) > now and p['status'] in {'APPROVED', 'SCHEDULED', 'DRAFT_READY'}
+                   and key in posts and candy_themed(posts[key]['data'])}
     x_statuses = Counter((p.get('x_promo') or {}).get('status') for p in state['posts'].values()
                          if (p.get('x_promo') or {}).get('status'))
+    current_month = datetime.now(TZ).strftime('%Y-%m')
+    monthly = dict(state.get('monthly_posting', {}).get(current_month, {}))
     value = {'mode': state.get('mode'), 'paused': state.get('paused'),
         'statuses': dict(Counter(p['status'] for p in state['posts'].values())),
         'x_promo_enabled': x_promotion_enabled(), 'x_promo_statuses': dict(x_statuses),
         'future_content_days': len(future_days), 'content_low': len(future_days) < 7,
+        'monthly_posting': {'month': current_month, **monthly},
         'would_process': [p['id'] for p in planned or []],
         'attention': [p['id'] for p in state['posts'].values() if p['status'] in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}
                       or (p.get('x_promo') or {}).get('status') in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}],
@@ -791,8 +957,9 @@ def report(state, posts, planned=None):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--mode', choices=['status', 'dry-run', 'shadow', 'refill', 'canary', 'render-only', 'analytics', 'pause'], default='status')
-    parser.add_argument('--post', help='Exact approved post ID for render-only/canary')
+    parser.add_argument('--mode', choices=['status', 'dry-run', 'shadow', 'refill', 'canary', 'render-only',
+                                           'direct-draft', 'metricool-media', 'analytics', 'pause'], default='status')
+    parser.add_argument('--post', help='Exact approved post ID for render-only/canary/direct-draft/metricool-media')
     parser.add_argument('--local-env', action='store_true')
     args = parser.parse_args(argv)
     if args.local_env:
@@ -801,6 +968,8 @@ def main(argv=None):
     if args.mode == 'render-only':
         if args.post not in posts:
             raise CloudError('EXACT_POST_REQUIRED')
+        if not candy_themed(posts[args.post]['data']):
+            raise CloudError('NOT_CANDY_THEMED')
         render(posts[args.post], require_visual_approval=False)
         print('Production render and media/narration checks passed; nothing uploaded or submitted.')
         return 0
@@ -810,8 +979,37 @@ def main(argv=None):
         store.change(lambda s: s.update(paused=True))
         print('New submissions paused. Existing Buffer queue is unchanged.')
         return 0
+    if args.mode == 'metricool-media':
+        if args.post not in posts:
+            raise CloudError('EXACT_POST_REQUIRED')
+        prepare_metricool_media(store, posts[args.post])
+        return 0
     if args.mode in {'status', 'dry-run'}:
         report(state, posts, candidates(state, posts, datetime.now(timezone.utc)))
+        return 0
+    state, _ = store.load()
+    planned = candidates(state, posts, datetime.now(timezone.utc))
+    if args.mode == 'direct-draft':
+        if os.environ.get('CANDY_PUBLISHING_ENABLED') != 'true':
+            raise CloudError('PUBLISHING_DISABLED')
+        if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('GITHUB_REF') != 'refs/heads/main':
+            raise CloudError('PRODUCTION_REQUIRES_MAIN_GITHUB_RUNNER')
+        if state.get('paused') or not state.get('local_disabled') or state.get('mode') != 'live':
+            raise CloudError('PUBLISHING_GATE_CLOSED')
+        if args.post:
+            if args.post not in posts:
+                raise CloudError('EXACT_POST_REQUIRED')
+            explicit = posts[args.post]
+            if dt(explicit['scheduled_at']) <= datetime.now(timezone.utc) + timedelta(minutes=45):
+                raise CloudError('SLOT_TOO_CLOSE')
+            planned = [explicit]
+        else:
+            planned = planned[:1]
+        if not planned:
+            raise CloudError('NO_ELIGIBLE_CANDY_POST')
+        prepare_direct_draft(store, planned[0])
+        state, _ = store.load()
+        report(state, posts, planned)
         return 0
     buffer = Buffer()
     buffer.channel_check()

@@ -1,0 +1,32 @@
+{
+  "day": 44,
+  "q1": {
+    "question": "Which company makes M&M's?",
+    "answer": "Mars",
+    "answers": ["Mars", "Hershey", "Ferrero", "Nestle"]
+  },
+  "q2": {
+    "question": "What candy bar is famous for its crispy wafer layers?",
+    "answer": "Kit Kat",
+    "answers": ["Snickers", "Kit Kat", "Milky Way", "3 Musketeers"]
+  },
+  "q3": {
+    "question": "Which candy has the slogan 'Taste the Rainbow'?",
+    "answer": "Skittles",
+    "withhold": true
+  },
+  "caption": "Candy trivia time. Can you get all 3? #trivia #candytok #quiztime #snackfacts",
+  "scheduledAt": "2026-09-16T09:00:00-07:00",
+  "meta": {
+    "calendarDay": 16,
+    "slot": 1,
+    "format": "manual-candy-trivia",
+    "goal": "review-buffer-refill",
+    "sources": [
+      "https://www.mars.com/our-brands/mms",
+      "https://www.hersheyland.com/kit-kat",
+      "https://www.skittles.com/"
+    ]
+  },
+  "visualTemplate": "A"
+}
