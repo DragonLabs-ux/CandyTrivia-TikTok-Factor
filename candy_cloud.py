@@ -723,12 +723,17 @@ def ensure_thumbnail(post):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1200)
     if result.returncode:
         raise CloudError('THUMBNAIL_RENDER_FAILED')
-    proof = ROOT / 'out' / 'review' / 'covers' / f"post-{post['number']:03d}-cover.png"
-    thumbnail = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}-cover.png"
     try:
+        covers = json.loads(result.stdout.decode('utf-8')).get('covers', [])
+        if not covers:
+            raise OSError('cover output not reported')
+        proof = Path(covers[0])
+        if not proof.is_absolute():
+            proof = ROOT / proof
+        thumbnail = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}-cover.png"
         thumbnail.parent.mkdir(parents=True, exist_ok=True)
         thumbnail.write_bytes(proof.read_bytes())
-    except OSError:
+    except (KeyError, TypeError, ValueError, UnicodeDecodeError, OSError):
         raise CloudError('THUMBNAIL_MISSING') from None
     return validate_thumbnail(post)
 
