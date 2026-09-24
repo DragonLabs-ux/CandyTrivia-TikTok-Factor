@@ -386,7 +386,40 @@ class PublisherTests(unittest.TestCase):
 
     def test_canary_cannot_skip_shadow_period(self):
         with patch.object(admin, 'load_campaign', return_value=self.posts):
-            with self.assertRaisesRegex(c.CloudError, '48_HOURS'):
+            with self.assertRaisesRegex(c.CloudError, '24_HOURS'):
+                admin.activate(self.store, self.post['id'])
+
+    def test_canary_accepts_24_hour_observation_window(self):
+        start = self.now - timedelta(hours=24, minutes=5)
+        campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
+        observations = [{'at': (start + timedelta(hours=i)).isoformat(),
+                         'campaign_hash': campaign_hash} for i in range(25)]
+        self.store.change(lambda s: s.update(shadow_runs=observations,
+                                              history_exported_at=c.now_iso()))
+        with patch.object(admin, 'load_campaign', return_value=self.posts):
+            admin.activate(self.store, self.post['id'])
+        state, _ = self.store.load()
+        self.assertEqual('canary', state['mode'])
+        self.assertEqual(self.post['id'], state['canary_id'])
+
+    def test_canary_rejects_less_than_24_hours_even_with_24_runs(self):
+        start = self.now - timedelta(hours=23, minutes=5)
+        campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
+        observations = [{'at': (start + timedelta(hours=i)).isoformat(),
+                         'campaign_hash': campaign_hash} for i in range(24)]
+        self.store.change(lambda s: s.update(shadow_runs=observations))
+        with patch.object(admin, 'load_campaign', return_value=self.posts):
+            with self.assertRaisesRegex(c.CloudError, '24_HOURS'):
+                admin.activate(self.store, self.post['id'])
+
+    def test_canary_rejects_gap_in_shadow_observations(self):
+        start = self.now - timedelta(hours=24, minutes=5)
+        campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
+        observations = [{'at': (start + timedelta(hours=i)).isoformat(),
+                         'campaign_hash': campaign_hash} for i in range(25) if i != 12 and i != 13]
+        self.store.change(lambda s: s.update(shadow_runs=observations))
+        with patch.object(admin, 'load_campaign', return_value=self.posts):
+            with self.assertRaisesRegex(c.CloudError, '24_HOURS'):
                 admin.activate(self.store, self.post['id'])
 
     def test_live_requires_confirmed_canary_delivery(self):
