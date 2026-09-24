@@ -141,6 +141,20 @@ def archive_uncertain_past(store, post_id=None):
     buffer.channel_check()
     reconcile(store, buffer)
     now = datetime.now(timezone.utc)
+    state, _ = store.load()
+    provider_observations = {}
+    for key, post in state['posts'].items():
+        if post_id and key != post_id:
+            continue
+        if post.get('status') not in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}:
+            continue
+        provider_id = post.get('buffer_post_id')
+        if not provider_id:
+            continue
+        try:
+            provider_observations[key] = buffer.get(provider_id)
+        except NotFound:
+            provider_observations[key] = {'id': provider_id, 'status': 'not_found'}
 
     def change(s):
         archived = []
@@ -155,8 +169,12 @@ def archive_uncertain_past(store, post_id=None):
             live = [row for row in observations if row.get('status') in {'sent', 'scheduled', 'pending', 'sending'}]
             if live:
                 raise CloudError('UNCERTAIN_POST_HAS_LIVE_BUFFER_OBSERVATION')
-            if post.get('buffer_post_id'):
-                raise CloudError('UNCERTAIN_POST_HAS_PROVIDER_ID')
+            provider_id = post.get('buffer_post_id')
+            if provider_id:
+                observed = provider_observations.get(key)
+                if observed and observed.get('status') in {'sent', 'scheduled', 'pending', 'sending'}:
+                    raise CloudError('UNCERTAIN_POST_HAS_LIVE_PROVIDER_ID')
+                post['archived_buffer_post_id'] = provider_id
             post.update(status='HISTORICAL', error='ARCHIVED_UNCERTAIN_PAST_REVIEW_REQUIRED',
                         archived_uncertain_at=now_iso())
             archived.append(key)
