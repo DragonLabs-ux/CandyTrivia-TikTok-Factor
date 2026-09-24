@@ -66,7 +66,7 @@ The source workflow must be on the default branch, `main`, for scheduled runs. P
 
 1. Transfer existing configuration with `configure-github`; add the private-state credentials.
 2. Run the GitHub workflow in `import-history` mode. It imports preserved local evidence and snapshots all available Candy Buffer records, reconciles known IDs, and starts in shadow mode. An import older than 24 hours is rejected; rerun configuration to refresh it.
-3. Set `CANDY_CLOUD_CONFIGURED=true`. Allow at least 48 hours of hourly shadow observations. Shadow records selected posts and checks known deliveries, without rendering, uploading media, or submitting a post. The current local publisher remains the publishing path during this phase.
+3. Set `CANDY_CLOUD_CONFIGURED=true`. Allow at least 24 hours of hourly shadow observations with at least 24 matching campaign observations and no gap over 2.5 hours. Shadow records selected posts and checks known deliveries, without rendering, uploading media, or submitting a post. The current local publisher remains the publishing path during this phase.
 4. Review shadow decisions against the local operator's expected skips/choices. Passing the clock gate alone is not proof that every decision is correct. Resolve differences and uncertain history first.
 5. Run a manual `render-only` job with a specific future post ID. This verifies the actual Linux renderer and MP4, SRT, and narration windows without submission. Full logs/answers are not uploaded to public artifacts.
 6. Run `python candy_cloud_admin.py freeze-local` in this existing checkout. The marker disables the updated local autopilot and legacy TypeScript publishing entry point. Stop any older copies, standalone legacy scripts, or Windows scheduled publisher tasks as well; they cannot be disabled by a marker in a different checkout.
@@ -75,7 +75,7 @@ The source workflow must be on the default branch, `main`, for scheduled runs. P
 9. Set `CANDY_PUBLISHING_ENABLED=true`, then manually run `canary` with the same post ID. Only that record is eligible. Keep the scheduled mode as `shadow` during this check.
 10. Reconcile after its delivery window. Run `promote-live` only once the canary is confirmed SENT. Set `CANDY_CLOUD_MODE=refill`. The hourly timer then maintains the queue.
 
-The scripts do not bypass the 48-hour gate or label a queued post SENT. A one-post canary must deliver before full unattended scheduling is enabled.
+The scripts do not bypass the 24-hour gate or label a queued post SENT. A one-post canary must deliver before full unattended scheduling is enabled.
 
 **Optional X promotion**
 
