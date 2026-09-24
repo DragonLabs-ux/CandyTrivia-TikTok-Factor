@@ -1,0 +1,25 @@
+{
+  "day": 56,
+  "q1": {
+    "question": "Which candy bar is known for a flaky orange peanut-butter center?",
+    "answer": "Butterfinger"
+  },
+  "q2": {
+    "question": "Which candy is a roll of chocolate-covered caramel pieces?",
+    "answer": "Rolo"
+  },
+  "q3": {
+    "question": "Which candy is a classic chewy bear-shaped gummy?",
+    "answer": "Gummy Bears",
+    "withhold": true
+  },
+  "caption": "Afternoon candy quiz drop. Did you go 3 for 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-09-30T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 30,
+    "slot": 2,
+    "format": "manual-candy-trivia",
+    "goal": "buffer-afternoon-refill"
+  },
+  "visualTemplate": "A"
+}

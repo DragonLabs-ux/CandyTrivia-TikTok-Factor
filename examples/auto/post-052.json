@@ -1,0 +1,25 @@
+{
+  "day": 52,
+  "q1": {
+    "question": "Which candy bar has a cookie wafer snap under chocolate?",
+    "answer": "Kit Kat"
+  },
+  "q2": {
+    "question": "Which candy is a stretchy taffy strip with bold fruit flavors?",
+    "answer": "Airheads"
+  },
+  "q3": {
+    "question": "Which candy is cinnamon-flavored and comes in small red pieces?",
+    "answer": "Hot Tamales",
+    "withhold": true
+  },
+  "caption": "Afternoon candy quiz drop. Did you go 3 for 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-09-26T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 26,
+    "slot": 2,
+    "format": "manual-candy-trivia",
+    "goal": "buffer-afternoon-refill"
+  },
+  "visualTemplate": "A"
+}

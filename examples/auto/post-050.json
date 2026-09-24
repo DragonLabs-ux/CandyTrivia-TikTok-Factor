@@ -1,0 +1,25 @@
+{
+  "day": 50,
+  "q1": {
+    "question": "Which candy bar has crisped rice in a milk chocolate coating?",
+    "answer": "Crunch"
+  },
+  "q2": {
+    "question": "Which candy is famous for a chewy rainbow taffy texture?",
+    "answer": "Laffy Taffy"
+  },
+  "q3": {
+    "question": "Which candy has sour sugar outside and soft gummies inside?",
+    "answer": "Sour Patch Kids",
+    "withhold": true
+  },
+  "caption": "Afternoon candy quiz drop. Did you go 3 for 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-09-24T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 24,
+    "slot": 2,
+    "format": "manual-candy-trivia",
+    "goal": "buffer-afternoon-refill"
+  },
+  "visualTemplate": "A"
+}

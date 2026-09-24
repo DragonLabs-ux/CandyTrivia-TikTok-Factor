@@ -1,0 +1,25 @@
+{
+  "day": 55,
+  "q1": {
+    "question": "Which candy has chocolate, caramel, and nougat named after a galaxy?",
+    "answer": "Milky Way"
+  },
+  "q2": {
+    "question": "Which candy is chewy, fruity, and often sold in theater boxes?",
+    "answer": "Mike and Ike"
+  },
+  "q3": {
+    "question": "Which candy pairs cookie bars with caramel and chocolate?",
+    "answer": "Twix",
+    "withhold": true
+  },
+  "caption": "Afternoon candy quiz drop. Did you go 3 for 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-09-29T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 29,
+    "slot": 2,
+    "format": "manual-candy-trivia",
+    "goal": "buffer-afternoon-refill"
+  },
+  "visualTemplate": "B"
+}

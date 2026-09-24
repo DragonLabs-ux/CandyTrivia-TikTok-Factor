@@ -14,7 +14,9 @@ on:
           - dry-run
           - buffer-diagnostics
           - rebind-channel
+          - archive-uncertain-past
           - import-history
+          - sync-content
           - shadow
           - render-only
           - activate-canary
@@ -26,6 +28,7 @@ on:
           - refill
           - analytics
           - pause
+          - resume-live
       post:
         description: Exact post ID for render-only, canary, direct-draft, or metricool-media (candy-premium-2026-09:010)
         type: string
@@ -102,7 +105,7 @@ jobs:
             buffer-diagnostics)
               python buffer_diagnostics.py
               ;;
-            rebind-channel|import-history|activate-canary|recover-canary-render|promote-live)
+            rebind-channel|archive-uncertain-past|import-history|sync-content|activate-canary|recover-canary-render|promote-live|resume-live)
               args=("$MODE")
               if [[ -n "$POST" ]]; then args+=(--post "$POST"); fi
               python candy_cloud_admin.py "${args[@]}"

@@ -114,10 +114,13 @@ def sync_content():
 
     def change(s):
         for key, row in s['posts'].items():
-            if key not in posts or posts[key]['approved_hash'] != row['approved_hash']:
+            if key not in posts:
+                continue
+            if posts[key]['approved_hash'] != row['approved_hash']:
                 raise CloudError('EXISTING_APPROVED_CONTENT_CHANGED')
         additions = [p for key, p in posts.items() if key not in s['posts']]
-        if additions and min(p['number'] for p in additions) <= max(p['number'] for p in s['posts'].values()):
+        existing_numbers = [row['number'] for key, row in s['posts'].items() if key in posts]
+        if additions and existing_numbers and min(p['number'] for p in additions) <= max(existing_numbers):
             raise CloudError('CONTENT_MUST_BE_APPEND_ONLY')
         if any(dt(p['scheduled_at']) <= datetime.now(timezone.utc) + timedelta(minutes=45) for p in additions):
             raise CloudError('NEW_CONTENT_MUST_BE_SCHEDULED_IN_THE_FUTURE')
@@ -127,6 +130,44 @@ def sync_content():
         return len(additions)
 
     print(f'Approved content appended: {store.change(change)}')
+
+
+
+def archive_uncertain_past(store, post_id=None):
+    if os.environ.get('CANDY_PUBLISHING_ENABLED', '').strip().lower() == 'true':
+        raise CloudError('DISABLE_PUBLISHING_BEFORE_UNCERTAIN_ARCHIVE')
+    from candy_cloud import reconcile
+    buffer = Buffer()
+    buffer.channel_check()
+    reconcile(store, buffer)
+    now = datetime.now(timezone.utc)
+
+    def change(s):
+        archived = []
+        for key, post in s['posts'].items():
+            if post_id and key != post_id:
+                continue
+            if post.get('status') not in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}:
+                continue
+            if dt(post['scheduled_at']) > now - timedelta(hours=12):
+                raise CloudError('UNCERTAIN_POST_TOO_RECENT_OR_FUTURE')
+            observations = post.get('observations') or []
+            live = [row for row in observations if row.get('status') in {'sent', 'scheduled', 'pending', 'sending'}]
+            if live:
+                raise CloudError('UNCERTAIN_POST_HAS_LIVE_BUFFER_OBSERVATION')
+            if post.get('buffer_post_id'):
+                raise CloudError('UNCERTAIN_POST_HAS_PROVIDER_ID')
+            post.update(status='HISTORICAL', error='ARCHIVED_UNCERTAIN_PAST_REVIEW_REQUIRED',
+                        archived_uncertain_at=now_iso())
+            archived.append(key)
+            event(s, 'uncertain_past_archived', key)
+        if post_id and not archived:
+            raise CloudError('NO_MATCHING_UNCERTAIN_PAST_POST')
+        s['paused'] = True
+        return archived
+
+    archived = store.change(change)
+    print('Archived uncertain past posts: ' + ', '.join(archived))
 
 
 def rebind_channel(store):
@@ -221,6 +262,29 @@ def promote(store):
     store.change(change)
 
 
+
+def resume_live(store):
+    from candy_cloud import reconcile
+    b = Buffer()
+    b.channel_check()
+    reconcile(store, b)
+
+    def change(s):
+        if s.get('mode') != 'live':
+            raise CloudError('LIVE_MODE_NOT_ACTIVATED')
+        if not s.get('history_imported') or not s.get('local_disabled'):
+            raise CloudError('PUBLISHING_GATE_CLOSED')
+        blocked = [key for key, post in s['posts'].items()
+                   if post.get('status') in {'SUBMITTING', 'UNCERTAIN', 'BLOCKED', 'RENDERING'}]
+        if blocked:
+            raise CloudError('RESOLVE_ATTENTION_POSTS_FIRST')
+        s['paused'] = False
+        event(s, 'live_resumed')
+
+    store.change(change)
+    print('Live publishing gate resumed. Existing Buffer queue is unchanged.')
+
+
 def recover_canary_render(store, post_id):
     if os.environ.get('CANDY_PUBLISHING_ENABLED') == 'true':
         raise CloudError('DISABLE_PUBLISHING_BEFORE_RECOVERY')
@@ -240,7 +304,8 @@ def recover_canary_render(store, post_id):
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('command', choices=['configure-github', 'import-history', 'sync-content', 'rebind-channel', 'freeze-local',
-                                       'activate-canary', 'recover-canary-render', 'promote-live'])
+                                       'archive-uncertain-past', 'activate-canary', 'recover-canary-render',
+                                       'promote-live', 'resume-live'])
     p.add_argument('--post')
     args = p.parse_args(argv)
     if args.command == 'configure-github':
@@ -256,12 +321,16 @@ def main(argv=None):
             sync_content()
         elif args.command == 'rebind-channel':
             rebind_channel(R2State())
+        elif args.command == 'archive-uncertain-past':
+            archive_uncertain_past(R2State(), args.post)
         elif args.command == 'activate-canary':
             activate(R2State(), args.post)
         elif args.command == 'recover-canary-render':
             recover_canary_render(R2State(), args.post)
-        else:
+        elif args.command == 'promote-live':
             promote(R2State())
+        else:
+            resume_live(R2State())
 
 
 if __name__ == '__main__':

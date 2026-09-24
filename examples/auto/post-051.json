@@ -1,0 +1,25 @@
+{
+  "day": 51,
+  "q1": {
+    "question": "Which candy bar is known for caramel, nougat, peanuts, and chocolate?",
+    "answer": "Snickers"
+  },
+  "q2": {
+    "question": "Which candy comes as tiny crunchy pieces in a colorful box?",
+    "answer": "Nerds"
+  },
+  "q3": {
+    "question": "Which candy is a wearable lollipop shaped like a gem?",
+    "answer": "Ring Pop",
+    "withhold": true
+  },
+  "caption": "Afternoon candy quiz drop. Did you go 3 for 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-09-25T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 25,
+    "slot": 2,
+    "format": "manual-candy-trivia",
+    "goal": "buffer-afternoon-refill"
+  },
+  "visualTemplate": "B"
+}
