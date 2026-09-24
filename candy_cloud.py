@@ -727,14 +727,20 @@ def ensure_thumbnail(post):
         output = result.stdout.decode('utf-8')
         covers = []
         decoder = json.JSONDecoder()
-        for match in re.finditer(r'\\{', output):
+        start = 0
+        while True:
+            start = output.find('{', start)
+            if start < 0:
+                break
             try:
-                payload, _ = decoder.raw_decode(output[match.start():])
+                payload, _ = decoder.raw_decode(output[start:])
             except ValueError:
+                start += 1
                 continue
             if isinstance(payload, dict) and isinstance(payload.get('covers'), list):
                 covers = payload['covers']
                 break
+            start += 1
         proof = Path(covers[0]) if covers else (
             ROOT / 'out' / 'review' / 'covers' / f"post-{post['number']:03d}-cover.png")
         if not proof.is_absolute():
