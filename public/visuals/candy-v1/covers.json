@@ -742,6 +742,139 @@
           "subjectImage": "visuals/candy-v1/subjects/delicious.png"
         }
       ]
+    },
+    "050": {
+      "heading": "CANDY TRIO",
+      "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "CHOCOLATE BARS",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        },
+        {
+          "label": "FRUITY CHEWS",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "SOUR TREATS",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        }
+      ]
+    },
+    "051": {
+      "heading": "NUTTY + CRUNCHY",
+      "backgroundImage": "visuals/candy-v1/backgrounds/creatures.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "NUTTY CHOCOLATE",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        },
+        {
+          "label": "CRUNCHY CANDY",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        },
+        {
+          "label": "LOLLIPOP FUN",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        }
+      ]
+    },
+    "052": {
+      "heading": "WAFERS + FRUIT",
+      "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "WAFER BARS",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        },
+        {
+          "label": "FRUIT TAFFY",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "CINNAMON CANDY",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        }
+      ]
+    },
+    "053": {
+      "heading": "PEANUTS + TART TREATS",
+      "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "PEANUT BUTTER",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        },
+        {
+          "label": "TART TABLETS",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "PEANUT CARAMEL",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        }
+      ]
+    },
+    "054": {
+      "heading": "FRUITY + CHOCOLATE",
+      "backgroundImage": "visuals/candy-v1/backgrounds/creatures.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "FRUITY GUMMIES",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "COCONUT CHOCOLATE",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        },
+        {
+          "label": "FRUIT DROPS",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        }
+      ]
+    },
+    "055": {
+      "heading": "CARAMEL + FRUIT",
+      "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "CHOCOLATE CARAMEL",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        },
+        {
+          "label": "FRUITY CHEWS",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "COOKIE CARAMEL",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        }
+      ]
+    },
+    "056": {
+      "heading": "PEANUT BUTTER + GUMMIES",
+      "backgroundImage": "visuals/candy-v1/backgrounds/creatures.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "PEANUT BUTTER",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        },
+        {
+          "label": "CARAMEL ROLLS",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        },
+        {
+          "label": "GUMMY TREATS",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        }
+      ]
     }
   }
 }
