@@ -709,6 +709,30 @@ def validate_thumbnail(post):
     return file
 
 
+def ensure_thumbnail(post):
+    # render-local normally emits this frame with the video. Some renderer paths
+    # omit it, so use the dedicated cover command as a safe recovery path.
+    try:
+        return validate_thumbnail(post)
+    except CloudError as exc:
+        if str(exc) not in {'THUMBNAIL_MISSING', 'THUMBNAIL_INVALID', 'THUMBNAIL_DIMENSIONS_INVALID'}:
+            raise
+
+    npm = 'npm.cmd' if os.name == 'nt' else 'npm'
+    result = subprocess.run([npm, 'run', 'render-covers', '--', post['file']], cwd=ROOT,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1200)
+    if result.returncode:
+        raise CloudError('THUMBNAIL_RENDER_FAILED')
+    proof = ROOT / 'out' / 'review' / 'covers' / f"post-{post['number']:03d}-cover.png"
+    thumbnail = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}-cover.png"
+    try:
+        thumbnail.parent.mkdir(parents=True, exist_ok=True)
+        thumbnail.write_bytes(proof.read_bytes())
+    except OSError:
+        raise CloudError('THUMBNAIL_MISSING') from None
+    return validate_thumbnail(post)
+
+
 def render(post, require_visual_approval=True):
     import candy_production_validation as validation
     validate_cover(post, require_visual_approval)
@@ -722,7 +746,7 @@ def render(post, require_visual_approval=True):
     if result.returncode:
         raise CloudError('RENDER_FAILED')
     file = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}.mp4"
-    validate_thumbnail(post)
+    ensure_thumbnail(post)
     validation.validate_media(post['data'].get('visualTemplate', 'A'), file, file.with_suffix('.srt'))
     validation.validate_narration(post['number'])
     return file
