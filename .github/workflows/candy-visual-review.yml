@@ -31,7 +31,9 @@ jobs:
       - run: npm ci
       - run: python -m pip install Pillow==11.3.0
       - name: Render checked-in cover examples
-        run: npm run render-covers -- examples/auto/post-*.json
+        run: |
+          mapfile -t cover_examples < <(python -c "import json; from pathlib import Path; data=json.loads(Path('public/visuals/candy-v2/covers.json').read_text()); print('\\n'.join(f'examples/auto/post-{post_id}.json' for post_id in data['posts']))")
+          npm run render-covers -- "${cover_examples[@]}"
       - name: Render non-publishing production sample
         run: npm run render -- examples/auto/post-013.json
       - name: Build full-size and phone-size contact sheets
