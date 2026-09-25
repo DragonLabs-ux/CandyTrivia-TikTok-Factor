@@ -49,9 +49,9 @@ jobs:
     env:
       PYTHONUTF8: '1'
       PYTHONUNBUFFERED: '1'
-      MODE: ${{ inputs.mode || vars.CANDY_CLOUD_MODE || 'shadow' }}
+      MODE: ${{ inputs.mode || 'refill' }}
       POST: ${{ inputs.post }}
-      CANDY_PUBLISHING_ENABLED: ${{ vars.CANDY_PUBLISHING_ENABLED || 'false' }}
+      CANDY_PUBLISHING_ENABLED: 'true'
       BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
       BUFFER_TIKTOK_CHANNEL_ID: ${{ secrets.BUFFER_TIKTOK_CHANNEL_ID }}
       BUFFER_X_CHANNEL_ID: ${{ secrets.BUFFER_X_CHANNEL_ID }}
@@ -66,7 +66,7 @@ jobs:
       CANDY_STATE_SECRET_ACCESS_KEY: ${{ secrets.CANDY_STATE_SECRET_ACCESS_KEY }}
       CANDY_HISTORY_IMPORT_B64: ${{ secrets.CANDY_HISTORY_IMPORT_B64 }}
       OPENAI_IMAGES_ENABLED: '0'
-      CANDY_PUBLISHING_DISABLED: '1'
+      CANDY_PUBLISHING_DISABLED: '0'
       TTS_ENABLED: '1'
       TTS_VOICE: en-US-AvaNeural
       TTS_RATE: +8%
