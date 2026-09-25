@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a reviewable seven-day Candy batch; never publish or approve it."""
+"""Maintain a reviewable Candy content runway; never publish or approve generated posts."""
 import argparse, json, os, random, re, time, urllib.error, urllib.request
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timedelta
@@ -133,15 +133,20 @@ def verify_question_answers(facts):
         raise CloudError('QUESTION_ANSWER_AUTOCORRECT_FAILED')
     return corrected
 
-def generate(count=21, min_future_days=10, force=False):
-    if count < 1:
-        raise CloudError('POST_COUNT_REQUIRED')
+def generate(count=None, min_future_days=14, force=False):
     posts = load_campaign(); now = datetime.now(TZ)
     latest = max(datetime.fromisoformat(p['scheduled_at']).astimezone(TZ) for p in posts.values())
-    if not force and (latest.date() - now.date()).days >= min_future_days:
-        print('Content coverage is sufficient; no batch created.'); return []
+    future_days = max(0, (latest.date() - now.date()).days)
+    if count is None:
+        count = max(0, min_future_days - future_days)
+    if force and count < 1:
+        count = min_future_days
+    if count < 1:
+        print(f'Content coverage is sufficient ({future_days} future days); no batch created.'); return []
     if force:
         print('Force enabled; creating review-only posts beyond the latest local campaign date.', flush=True)
+    else:
+        print(f'Content runway is {future_days} days; creating {count} review-only post(s) to reach {min_future_days} days.', flush=True)
     existing = [p['data'][s]['question'] for p in posts.values() for s in ('q1','q2','q3')]
     needed=count*3
     schema={'type':'object','properties':{'facts':{'type':'array','minItems':needed,'maxItems':needed,'items':{'type':'object','properties':{'question':{'type':'string'},'answer':{'type':'string'},'source_url':{'type':'string'}},'required':['question','answer','source_url'],'additionalProperties':False}}},'required':['facts'],'additionalProperties':False}
@@ -194,4 +199,4 @@ def generate(count=21, min_future_days=10, force=False):
     print(f'Created {len(written)} review-only posts.'); return written
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(); p.add_argument('--posts',type=int,default=21); p.add_argument('--min-future-days',type=int,default=10); p.add_argument('--force',action='store_true'); a=p.parse_args(); generate(a.posts,a.min_future_days,a.force)
+    p=argparse.ArgumentParser(); p.add_argument('--posts',type=int); p.add_argument('--min-future-days',type=int,default=14); p.add_argument('--force',action='store_true'); a=p.parse_args(); generate(a.posts,a.min_future_days,a.force)
