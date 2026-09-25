@@ -2,7 +2,7 @@
 """One-time history import, encrypted GitHub setup and deliberate cloud cutover.
 
 Does not publish. A successful import starts shadow mode. Production activation
-requires 48 hours of shadow observations, fresh history, local cutover, and an
+requires 24 hours of shadow observations, fresh history, local cutover, and an
 explicit canary; live mode requires that canary to have been delivered.
 """
 from __future__ import annotations
@@ -251,13 +251,25 @@ def freeze_local():
     print('Legacy local publisher disabled. Export/import fresh history before canary activation.')
 
 
+SHADOW_OBSERVATION_HOURS = 24
+SHADOW_MAX_GAP = timedelta(hours=2, minutes=30)
+
+
 def activate(store, post_id):
     def change(s):
-        runs = s.get('shadow_runs', [])
         expected = digest({k: p['approved_hash'] for k, p in load_campaign().items()})
-        runs = [r for r in runs if r.get('campaign_hash') == expected]
-        if len(runs) < 3 or (dt(runs[-1]['at']) - dt(runs[0]['at'])).total_seconds() < 48 * 3600:
-            raise CloudError('NEED_48_HOURS_OF_SHADOW_RUNS')
+        runs = sorted((r for r in s.get('shadow_runs', [])
+                       if r.get('campaign_hash') == expected), key=lambda r: dt(r['at']))
+        clean = []
+        for row in runs:
+            if clean and dt(row['at']) - dt(clean[-1]['at']) > SHADOW_MAX_GAP:
+                clean = []
+            clean.append(row)
+        now = datetime.now(timezone.utc)
+        if (len(clean) < SHADOW_OBSERVATION_HOURS
+                or (not clean or now - dt(clean[0]['at']) < timedelta(hours=SHADOW_OBSERVATION_HOURS))
+                or now - dt(clean[-1]['at']) > SHADOW_MAX_GAP):
+            raise CloudError('NEED_24_HOURS_OF_SHADOW_RUNS')
         if not s.get('local_disabled') or (datetime.now(timezone.utc) - dt(s['history_exported_at'])).total_seconds() > 3600:
             raise CloudError('FREEZE_LOCAL_AND_IMPORT_FRESH_HISTORY')
         if post_id not in s['posts'] or s['posts'][post_id]['status'] != 'APPROVED':
