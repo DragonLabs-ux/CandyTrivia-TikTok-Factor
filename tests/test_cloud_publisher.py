@@ -393,7 +393,7 @@ class PublisherTests(unittest.TestCase):
         start = self.now - timedelta(hours=24, minutes=5)
         campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
         observations = [{'at': (start + timedelta(hours=i)).isoformat(),
-                         'campaign_hash': campaign_hash} for i in range(25)]
+                         'campaign_hash': campaign_hash} for i in (0, 8, 16, 24)]
         self.store.change(lambda s: s.update(shadow_runs=observations,
                                               history_exported_at=c.now_iso()))
         with patch.object(admin, 'load_campaign', return_value=self.posts):
@@ -402,11 +402,11 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual('canary', state['mode'])
         self.assertEqual(self.post['id'], state['canary_id'])
 
-    def test_canary_rejects_less_than_24_hours_even_with_24_runs(self):
+    def test_canary_rejects_less_than_24_hours_even_with_required_runs(self):
         start = self.now - timedelta(hours=23, minutes=5)
         campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
         observations = [{'at': (start + timedelta(hours=i)).isoformat(),
-                         'campaign_hash': campaign_hash} for i in range(24)]
+                         'campaign_hash': campaign_hash} for i in (0, 8, 16, 23)]
         self.store.change(lambda s: s.update(shadow_runs=observations))
         with patch.object(admin, 'load_campaign', return_value=self.posts):
             with self.assertRaisesRegex(c.CloudError, '24_HOURS'):
@@ -416,7 +416,7 @@ class PublisherTests(unittest.TestCase):
         start = self.now - timedelta(hours=24, minutes=5)
         campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
         observations = [{'at': (start + timedelta(hours=i)).isoformat(),
-                         'campaign_hash': campaign_hash} for i in range(25) if i != 12 and i != 13]
+                         'campaign_hash': campaign_hash} for i in (0, 8, 24)]
         self.store.change(lambda s: s.update(shadow_runs=observations))
         with patch.object(admin, 'load_campaign', return_value=self.posts):
             with self.assertRaisesRegex(c.CloudError, '24_HOURS'):
