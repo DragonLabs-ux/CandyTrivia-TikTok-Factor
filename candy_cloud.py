@@ -807,6 +807,29 @@ def cached_media(store, post):
         raise CloudError('CACHED_MEDIA_VERIFICATION_FAILED') from None
 
 
+def remember_cached_video(store, post, owner, video):
+    """Persist rendered media before submission; reconcile uncertain state writes safely."""
+    def remember(s):
+        p = s['posts'][post['id']]
+        if p.get('owner') != owner or p['status'] != 'RENDERING':
+            raise CloudError('CLAIM_LOST')
+        p['cached_video'] = video
+    try:
+        store.change(remember)
+        return
+    except CloudError as exc:
+        if str(exc) != 'STATE_WRITE_UNCERTAIN':
+            raise
+        # The conditional write may actually have committed. Re-read and accept
+        # only an exact match; otherwise fail closed and do not contact Buffer.
+        state, _ = store.load()
+        current = state['posts'][post['id']]
+        if (current.get('owner') == owner and current.get('status') == 'RENDERING'
+                and current.get('cached_video') == video):
+            return
+        raise CloudError('CACHE_RECORD_UNCERTAIN') from None
+
+
 def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=cached_media, x_channel=None):
     owner = uuid.uuid4().hex
     claim(store, post, owner, datetime.now(timezone.utc))
@@ -815,12 +838,7 @@ def deliver(store, buffer, post, render_fn=render, upload_fn=upload, cache_fn=ca
         video = cache_fn(store, post) or upload_fn(post, render_fn(post))
         video['render_key'] = render_key(post)
         stage = 'cache_record'
-        def remember(s):
-            p = s['posts'][post['id']]
-            if p.get('owner') != owner or p['status'] != 'RENDERING':
-                raise CloudError('CLAIM_LOST')
-            p['cached_video'] = video
-        store.change(remember)
+        remember_cached_video(store, post, owner, video)
         # Refresh external queue immediately before the irreversible call. Any
         # same-caption/same-slot item or exhausted daily count blocks submission.
         stage = 'buffer_queue_read'
