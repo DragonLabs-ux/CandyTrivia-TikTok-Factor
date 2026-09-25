@@ -1,10 +1,6 @@
 name: Candy Python Cloud Autopilot
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/candy-cloud.yml'
   schedule:
     - cron: '17 */8 * * *'
   workflow_dispatch:
