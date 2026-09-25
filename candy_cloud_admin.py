@@ -252,7 +252,11 @@ def freeze_local():
 
 
 SHADOW_OBSERVATION_HOURS = 24
-SHADOW_MAX_GAP = timedelta(hours=2, minutes=30)
+SHADOW_OBSERVATION_INTERVAL_HOURS = 8
+SHADOW_REQUIRED_RUNS = 4
+# Scheduled GitHub jobs can start late. Allow up to 10 hours between nominal 8-hour checks;
+# missing an entire checkpoint still creates a ~16-hour gap and fails closed.
+SHADOW_MAX_GAP = timedelta(hours=10)
 
 
 def activate(store, post_id):
@@ -266,10 +270,10 @@ def activate(store, post_id):
                 clean = []
             clean.append(row)
         now = datetime.now(timezone.utc)
-        if (len(clean) < SHADOW_OBSERVATION_HOURS
+        if (len(clean) < SHADOW_REQUIRED_RUNS
                 or (not clean or now - dt(clean[0]['at']) < timedelta(hours=SHADOW_OBSERVATION_HOURS))
                 or now - dt(clean[-1]['at']) > SHADOW_MAX_GAP):
-            raise CloudError('NEED_24_HOURS_OF_SHADOW_RUNS')
+            raise CloudError('NEED_24_HOURS_OF_8_HOUR_SHADOW_CHECKS')
         if not s.get('local_disabled') or (datetime.now(timezone.utc) - dt(s['history_exported_at'])).total_seconds() > 3600:
             raise CloudError('FREEZE_LOCAL_AND_IMPORT_FRESH_HISTORY')
         if post_id not in s['posts'] or s['posts'][post_id]['status'] != 'APPROVED':
