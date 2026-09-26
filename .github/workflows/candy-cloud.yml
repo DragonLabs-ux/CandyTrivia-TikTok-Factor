@@ -53,7 +53,7 @@ jobs:
     env:
       PYTHONUTF8: '1'
       PYTHONUNBUFFERED: '1'
-      MODE: ${{ inputs.mode || 'sync-content' }}
+      MODE: ${{ inputs.mode || 'refill' }}
       POST: ${{ inputs.post }}
       CANDY_PUBLISHING_ENABLED: 'true'
       BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
