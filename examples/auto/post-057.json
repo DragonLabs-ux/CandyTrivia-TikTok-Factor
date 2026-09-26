@@ -1,0 +1,25 @@
+{
+  "day": 57,
+  "q1": {
+    "question": "Which candy bar combines chocolate, caramel, and nougat?",
+    "answer": "Milky Way"
+  },
+  "q2": {
+    "question": "Which candy is famous for colorful fruit-flavored shells?",
+    "answer": "Skittles"
+  },
+  "q3": {
+    "question": "Which candy has peanut butter inside a chocolate cup?",
+    "answer": "Reese's",
+    "withhold": true
+  },
+  "caption": "Tonight's Candy Trivia test! Can you go 3 for 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-09-25T19:00:00-07:00",
+  "meta": {
+    "calendarDay": 25,
+    "slot": 3,
+    "format": "live-test-candy-trivia",
+    "goal": "7pm-live-test"
+  },
+  "visualTemplate": "A"
+}
