@@ -1,16 +1,16 @@
 {
   "day": 57,
   "q1": {
-    "question": "Which candy bar combines chocolate, caramel, and nougat?",
-    "answer": "Milky Way"
+    "question": "Which candy is sold in small dispensers topped with character heads?",
+    "answer": "PEZ"
   },
   "q2": {
-    "question": "Which candy is famous for colorful fruit-flavored shells?",
-    "answer": "Skittles"
+    "question": "Which candy uses the slogan that it melts in your mouth, not in your hand?",
+    "answer": "M&M's"
   },
   "q3": {
-    "question": "Which candy has peanut butter inside a chocolate cup?",
-    "answer": "Reese's",
+    "question": "Which candy bar has crisped rice covered in milk chocolate?",
+    "answer": "Crunch",
     "withhold": true
   },
   "caption": "Tonight's Candy Trivia test! Can you go 3 for 3? #trivia #candytok #quiz #candyfacts",
