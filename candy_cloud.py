@@ -696,8 +696,17 @@ def validate_cover(post, require_approval=True):
     return cover
 
 
-def validate_thumbnail(post):
+def validate_thumbnail(post, video_file=None):
     file = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}-cover.png"
+    if not file.exists() and video_file is not None and Path(video_file).is_file():
+        try:
+            subprocess.run([
+                'ffmpeg', '-y', '-v', 'error', '-ss', str(THUMBNAIL_OFFSET_MS / 1000),
+                '-i', str(video_file), '-frames:v', '1', '-vf', 'scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2',
+                str(file)
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+        except Exception:
+            raise CloudError('THUMBNAIL_GENERATION_FAILED') from None
     try:
         header = file.read_bytes()[:24]
     except OSError:
@@ -722,7 +731,7 @@ def render(post, require_visual_approval=True):
     if result.returncode:
         raise CloudError('RENDER_FAILED')
     file = ROOT / 'out' / f"candy-trivia-day-{post['number']:03d}.mp4"
-    validate_thumbnail(post)
+    validate_thumbnail(post, file)
     validation.validate_media(post['data'].get('visualTemplate', 'A'), file, file.with_suffix('.srt'))
     validation.validate_narration(post['number'])
     return file
