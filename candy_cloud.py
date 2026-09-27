@@ -545,10 +545,14 @@ def reconcile(store, buffer):
             elif p['status'] in {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED'}:
                 only_not_found = bool(seen) and all(r.get('status') == 'not_found' for r in seen)
                 stale_slot = dt(p['scheduled_at']) <= datetime.now(timezone.utc) - timedelta(hours=6)
-                if (p.get('buffer_ids') and only_not_found and stale_slot):
+                lost_known_id = bool(p.get('buffer_ids')) and only_not_found
+                lost_unknown_id = (not p.get('buffer_ids') and bool(p.get('video'))
+                                   and not recovered.get(key) and not seen)
+                if stale_slot and (lost_known_id or lost_unknown_id):
                     # Preserve the attempt permanently, but retire it from active
-                    # attention after both Buffer lookup paths have lost the ID
-                    # well past the scheduled slot. Never retry or claim SENT.
+                    # attention after exhaustive provider/media reconciliation
+                    # finds no live evidence well past the scheduled slot.
+                    # Never retry and never claim SENT.
                     p.update(status='HISTORICAL',
                              error='PROVIDER_RECORD_EXPIRED_UNCONFIRMED',
                              delivery_unconfirmed=True,
