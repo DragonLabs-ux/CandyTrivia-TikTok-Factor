@@ -501,8 +501,9 @@ class Buffer:
 def reconcile(store, buffer):
     state, _ = store.load()
     updates = {}
-    pending_unknown = any(p['status'] in {'SUBMITTING', 'UNCERTAIN'} and not p.get('buffer_ids') and p.get('video') for p in state['posts'].values())
-    live = buffer.list_posts() if pending_unknown else []
+    active = any(p['status'] in {'SCHEDULED', 'SUBMITTING', 'UNCERTAIN', 'BLOCKED'} for p in state['posts'].values())
+    live = buffer.list_posts() if active else []
+    live_by_id = {p['id']: p for p in live}
     recovered = {}
     for key, p in state['posts'].items():
         if p['status'] not in {'SCHEDULED', 'HISTORICAL', 'SUBMITTING', 'UNCERTAIN', 'BLOCKED'}:
@@ -518,7 +519,10 @@ def reconcile(store, buffer):
             try:
                 observations.append(buffer.get(bid))
             except NotFound:
-                observations.append({'id': bid, 'status': 'not_found'})
+                # Buffer's single-post lookup can age out before its queue/history
+                # listing. Trust the same-channel list result when it still has
+                # the exact provider ID; otherwise remain fail-closed.
+                observations.append(live_by_id.get(bid, {'id': bid, 'status': 'not_found'}))
         updates[key] = observations
     def change(s):
         for key, seen in updates.items():
@@ -972,6 +976,8 @@ def report(state, posts, planned=None):
         'future_content_days': len(future_days), 'content_low': len(future_days) < 7,
         'monthly_posting': {'month': current_month, **monthly},
         'would_process': [p['id'] for p in planned or []],
+        'scheduled': [{'id': p['id'], 'scheduled_at': p.get('scheduled_at'), 'due_at': p.get('due_at')}
+                      for p in state['posts'].values() if p.get('status') == 'SCHEDULED'],
         'attention': [p['id'] for p in state['posts'].values() if p['status'] in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}
                       or (p.get('x_promo') or {}).get('status') in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}],
         'local_publisher_disabled': state.get('local_disabled', False)}
