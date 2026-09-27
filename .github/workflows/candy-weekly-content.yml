@@ -5,14 +5,14 @@ on:
   workflow_dispatch:
     inputs:
       posts:
-        description: Number of daily posts to generate per batch
+        description: Optional fixed post count; leave 0 to generate only enough to restore the runway
         required: false
-        default: '10'
+        default: '0'
         type: number
       min_future_days:
         description: Minimum days of scheduled future content required before generating
         required: false
-        default: '10'
+        default: '14'
         type: number
       force:
         description: Force a review batch beyond the latest local campaign date
@@ -45,7 +45,11 @@ jobs:
           if [ "${{ inputs.force || false }}" = "true" ]; then
             force_arg="--force"
           fi
-          python candy_content.py --posts "${{ inputs.posts || 10 }}" --min-future-days "${{ inputs.min_future_days || 10 }}" $force_arg
+          posts_arg=""
+          if [ "${{ inputs.posts || 0 }}" != "0" ]; then
+            posts_arg="--posts ${{ inputs.posts }}"
+          fi
+          python candy_content.py $posts_arg --min-future-days "${{ inputs.min_future_days || 14 }}" $force_arg
           first="$(git status --porcelain -- examples/auto | awk 'NR==1 {print $2}')"
           if [ -z "$first" ]; then
             echo 'created=false' >> "$GITHUB_OUTPUT"
