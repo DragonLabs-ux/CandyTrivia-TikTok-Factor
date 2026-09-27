@@ -1,0 +1,25 @@
+{
+  "day": 60,
+  "q1": {
+    "question": "Which candy comes as tiny tart pieces packed side by side in a colorful box?",
+    "answer": "Nerds"
+  },
+  "q2": {
+    "question": "Which candy has a peanut center inside many colorful chocolate pieces?",
+    "answer": "Peanut M&M's"
+  },
+  "q3": {
+    "question": "Which candy bar combines peanuts, caramel, nougat, and milk chocolate?",
+    "answer": "Snickers",
+    "withhold": true
+  },
+  "caption": "Candy Trivia Round 60! Can you get all 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-10-02T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 60,
+    "slot": 2,
+    "format": "approved-candy-trivia",
+    "goal": "content-runway"
+  },
+  "visualTemplate": "B"
+}
