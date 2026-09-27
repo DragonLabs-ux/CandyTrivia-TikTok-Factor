@@ -875,6 +875,120 @@
           "subjectImage": "visuals/candy-v1/subjects/fun.png"
         }
       ]
+    },
+    "057": {
+      "heading": "CLASSIC CANDY MIX",
+      "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "PEZ",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        },
+        {
+          "label": "M&M'S",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "CRUNCH",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        }
+      ]
+    },
+    "058": {
+      "heading": "CHEWY + CRUNCHY",
+      "backgroundImage": "visuals/candy-v1/backgrounds/creatures.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "TOOTSIE ROLL",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        },
+        {
+          "label": "WHOPPERS",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "NERDS",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        }
+      ]
+    },
+    "059": {
+      "heading": "RAINBOW + WAFERS",
+      "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "SKITTLES",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        },
+        {
+          "label": "KIT KAT",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "STARBURST",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        }
+      ]
+    },
+    "060": {
+      "heading": "TART + NUTTY",
+      "backgroundImage": "visuals/candy-v1/backgrounds/creatures.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "NERDS",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        },
+        {
+          "label": "PEANUT M&M'S",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "SNICKERS",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        }
+      ]
+    },
+    "061": {
+      "heading": "TWISTS + CHOCOLATE",
+      "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "TWIZZLERS",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        },
+        {
+          "label": "M&M'S",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "MOUNDS",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        }
+      ]
+    },
+    "062": {
+      "heading": "PEANUT BUTTER + CLASSICS",
+      "backgroundImage": "visuals/candy-v1/backgrounds/creatures.png",
+      "usesEmojiFallback": false,
+      "items": [
+        {
+          "label": "BUTTERFINGER",
+          "subjectImage": "visuals/candy-v1/subjects/candy.png"
+        },
+        {
+          "label": "TOOTSIE POP",
+          "subjectImage": "visuals/candy-v1/subjects/fun.png"
+        },
+        {
+          "label": "SMARTIES",
+          "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+        }
+      ]
     }
   }
 }
