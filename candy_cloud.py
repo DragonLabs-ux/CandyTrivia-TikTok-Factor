@@ -543,7 +543,19 @@ def reconcile(store, buffer):
             elif len(scheduled) > 1:
                 p.update(status='BLOCKED', error='MULTIPLE_SCHEDULED_COPIES')
             elif p['status'] in {'SUBMITTING', 'UNCERTAIN', 'SCHEDULED'}:
-                p.update(status='UNCERTAIN', error='RECONCILIATION_REQUIRED')
+                only_not_found = bool(seen) and all(r.get('status') == 'not_found' for r in seen)
+                stale_slot = dt(p['scheduled_at']) <= datetime.now(timezone.utc) - timedelta(hours=6)
+                if (p.get('buffer_ids') and only_not_found and stale_slot):
+                    # Preserve the attempt permanently, but retire it from active
+                    # attention after both Buffer lookup paths have lost the ID
+                    # well past the scheduled slot. Never retry or claim SENT.
+                    p.update(status='HISTORICAL',
+                             error='PROVIDER_RECORD_EXPIRED_UNCONFIRMED',
+                             delivery_unconfirmed=True,
+                             archived_uncertain_at=now_iso())
+                    event(s, 'uncertain_delivery_retired', key)
+                else:
+                    p.update(status='UNCERTAIN', error='RECONCILIATION_REQUIRED')
             # No IDs / not-found never restores APPROVED.
         s['last_reconcile'] = now_iso()
     store.change(change)
