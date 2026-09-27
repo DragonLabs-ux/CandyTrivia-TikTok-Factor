@@ -508,7 +508,10 @@ def reconcile(store, buffer):
     for key, p in state['posts'].items():
         if p['status'] not in {'SCHEDULED', 'HISTORICAL', 'SUBMITTING', 'UNCERTAIN', 'BLOCKED'}:
             continue
-        ids = p.get('buffer_ids', [])
+        ids = list(p.get('buffer_ids', []))
+        legacy_id = p.get('buffer_post_id')
+        if legacy_id and legacy_id not in ids:
+            ids.append(legacy_id)
         if not ids and p.get('video'):
             matches = [item for item in live if any(a.get('source') == p['video']['url'] for a in item.get('assets', []))]
             if len(matches) == 1:
