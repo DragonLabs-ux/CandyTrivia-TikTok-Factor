@@ -1,0 +1,25 @@
+{
+  "day": 61,
+  "q1": {
+    "question": "Which candy is commonly sold as chewy red twists?",
+    "answer": "Twizzlers"
+  },
+  "q2": {
+    "question": "Which candy has a chocolate center, colorful shell, and a small letter printed on it?",
+    "answer": "M&M's"
+  },
+  "q3": {
+    "question": "Which candy bar combines coconut with dark chocolate and no almonds?",
+    "answer": "Mounds",
+    "withhold": true
+  },
+  "caption": "Candy Trivia Round 61! Can you get all 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-10-03T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 61,
+    "slot": 2,
+    "format": "approved-candy-trivia",
+    "goal": "content-runway"
+  },
+  "visualTemplate": "A"
+}
