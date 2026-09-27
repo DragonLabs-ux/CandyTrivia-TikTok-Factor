@@ -1,0 +1,25 @@
+{
+  "day": 59,
+  "q1": {
+    "question": "Which candy is famous for the slogan 'Taste the rainbow'?",
+    "answer": "Skittles"
+  },
+  "q2": {
+    "question": "Which candy bar is built from crisp wafers covered in chocolate?",
+    "answer": "Kit Kat"
+  },
+  "q3": {
+    "question": "Which candy comes as chewy fruit-flavored squares in individual wrappers?",
+    "answer": "Starburst",
+    "withhold": true
+  },
+  "caption": "Candy Trivia Round 59! Can you get all 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-10-01T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 59,
+    "slot": 2,
+    "format": "approved-candy-trivia",
+    "goal": "content-runway"
+  },
+  "visualTemplate": "A"
+}
