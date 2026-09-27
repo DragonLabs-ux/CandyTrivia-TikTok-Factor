@@ -551,11 +551,16 @@ def reconcile(store, buffer):
                 lost_known_id = bool(p.get('buffer_ids')) and only_not_found
                 lost_unknown_id = (not p.get('buffer_ids') and bool(p.get('video'))
                                    and not recovered.get(key) and not seen)
-                if stale_slot and (lost_known_id or lost_unknown_id):
-                    # Preserve the attempt permanently, but retire it from active
-                    # attention after exhaustive provider/media reconciliation
-                    # finds no live evidence well past the scheduled slot.
-                    # Never retry and never claim SENT.
+                if stale_slot and p.get('status') == 'UNCERTAIN':
+                    # A stale uncertain delivery is never safe to replay. Once
+                    # its slot is six hours old, preserve it as historical and
+                    # explicitly unconfirmed rather than blocking live posting.
+                    p.update(status='HISTORICAL',
+                             error='STALE_UNCERTAIN_DELIVERY_RETIRED',
+                             delivery_unconfirmed=True,
+                             archived_uncertain_at=now_iso())
+                    event(s, 'uncertain_delivery_retired', key)
+                elif stale_slot and (lost_known_id or lost_unknown_id):
                     p.update(status='HISTORICAL',
                              error='PROVIDER_RECORD_EXPIRED_UNCONFIRMED',
                              delivery_unconfirmed=True,
