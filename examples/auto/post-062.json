@@ -1,0 +1,25 @@
+{
+  "day": 62,
+  "q1": {
+    "question": "Which candy bar is known for a crisp peanut-butter flavored center under chocolate?",
+    "answer": "Butterfinger"
+  },
+  "q2": {
+    "question": "Which candy is a round lollipop with a chewy Tootsie Roll center?",
+    "answer": "Tootsie Pop"
+  },
+  "q3": {
+    "question": "Which candy is sold as small pastel rolls of compressed sweet tablets?",
+    "answer": "Smarties",
+    "withhold": true
+  },
+  "caption": "Candy Trivia Round 62! Can you get all 3? #trivia #candytok #quiz #candyfacts",
+  "scheduledAt": "2026-10-04T15:00:00-07:00",
+  "meta": {
+    "calendarDay": 62,
+    "slot": 2,
+    "format": "approved-candy-trivia",
+    "goal": "content-runway"
+  },
+  "visualTemplate": "B"
+}
