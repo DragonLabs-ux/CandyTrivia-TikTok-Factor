@@ -384,6 +384,17 @@ class PublisherTests(unittest.TestCase):
         admin.merge_history(s, history, self.posts)
         self.assertEqual('SENT', s['posts'][self.post['id']]['status'])
 
+    def test_old_channel_shadow_observations_do_not_satisfy_window(self):
+        start = self.now - timedelta(hours=24, minutes=5)
+        campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
+        observations = [{'at': (start + timedelta(hours=i)).isoformat(),
+                         'campaign_hash': campaign_hash, 'channel_id': 'old-channel'} for i in (0, 8, 16, 24)]
+        self.store.change(lambda s: s.update(shadow_runs=observations,
+                                              history_exported_at=c.now_iso()))
+        with patch.object(admin, 'load_campaign', return_value=self.posts):
+            with self.assertRaisesRegex(c.CloudError, '24_HOURS'):
+                admin.activate(self.store, self.post['id'])
+
     def test_canary_cannot_skip_shadow_period(self):
         with patch.object(admin, 'load_campaign', return_value=self.posts):
             with self.assertRaisesRegex(c.CloudError, '24_HOURS'):
@@ -393,7 +404,7 @@ class PublisherTests(unittest.TestCase):
         start = self.now - timedelta(hours=24, minutes=5)
         campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
         observations = [{'at': (start + timedelta(hours=i)).isoformat(),
-                         'campaign_hash': campaign_hash} for i in (0, 8, 16, 24)]
+                         'campaign_hash': campaign_hash, 'channel_id': 'candy-test'} for i in (0, 8, 16, 24)]
         self.store.change(lambda s: s.update(shadow_runs=observations,
                                               history_exported_at=c.now_iso()))
         with patch.object(admin, 'load_campaign', return_value=self.posts):
@@ -406,7 +417,7 @@ class PublisherTests(unittest.TestCase):
         start = self.now - timedelta(hours=23, minutes=5)
         campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
         observations = [{'at': (start + timedelta(hours=i)).isoformat(),
-                         'campaign_hash': campaign_hash} for i in (0, 8, 16, 23)]
+                         'campaign_hash': campaign_hash, 'channel_id': 'candy-test'} for i in (0, 8, 16, 23)]
         self.store.change(lambda s: s.update(shadow_runs=observations))
         with patch.object(admin, 'load_campaign', return_value=self.posts):
             with self.assertRaisesRegex(c.CloudError, '24_HOURS'):
@@ -416,7 +427,7 @@ class PublisherTests(unittest.TestCase):
         start = self.now - timedelta(hours=24, minutes=5)
         campaign_hash = c.digest({k: p['approved_hash'] for k, p in self.posts.items()})
         observations = [{'at': (start + timedelta(hours=i)).isoformat(),
-                         'campaign_hash': campaign_hash} for i in (0, 8, 24)]
+                         'campaign_hash': campaign_hash, 'channel_id': 'candy-test'} for i in (0, 8, 24)]
         self.store.change(lambda s: s.update(shadow_runs=observations))
         with patch.object(admin, 'load_campaign', return_value=self.posts):
             with self.assertRaisesRegex(c.CloudError, '24_HOURS'):
