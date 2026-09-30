@@ -1,0 +1,31 @@
+{
+  "day": 67,
+  "postId": "067",
+  "hook": "Gummy texture quiz!",
+  "q1": {
+    "question": "Which common gelling ingredient gives many gummies their elastic chew?",
+    "answer": "Gelatin"
+  },
+  "q2": {
+    "question": "Which plant-derived gelling ingredient is used in some gummies?",
+    "answer": "Pectin"
+  },
+  "q3": {
+    "question": "Name another ingredient that can help form a gummy gel.",
+    "answer": "Starch",
+    "withhold": true
+  },
+  "cta": "Play the web edition!",
+  "caption": "Gummy texture quiz! Play the web edition—link in bio! #trivia #gummies #quiztime #sweetfacts",
+  "visualTemplate": "B",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "website",
+    "destinationUrl": "https://dragonlabs.app/arcade/trivia-candy-fun/",
+    "sources": [
+      "https://www.acs.org/education/activities/unleashing-carbon-dioxide.html",
+      "https://www.sciencedirect.com/science/article/pii/S0268005X20329234"
+    ]
+  }
+}
