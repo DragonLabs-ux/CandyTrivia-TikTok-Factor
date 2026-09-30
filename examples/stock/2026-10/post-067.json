@@ -26,5 +26,24 @@
     "sources": [
       "https://www.sciencedirect.com/science/article/pii/S0268005X20329234"
     ]
+  },
+  "cover": {
+    "heading": "GUMMY TEXTURE TEST",
+    "backgroundImage": "visuals/candy-v1/backgrounds/creatures.png",
+    "usesEmojiFallback": false,
+    "items": [
+      {
+        "label": "GELATIN",
+        "subjectImage": "visuals/candy-v1/subjects/character.png"
+      },
+      {
+        "label": "PECTIN",
+        "subjectImage": "visuals/candy-v1/subjects/candy.png"
+      },
+      {
+        "label": "STARCH",
+        "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+      }
+    ]
   }
 }
