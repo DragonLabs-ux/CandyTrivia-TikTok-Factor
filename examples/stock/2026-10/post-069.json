@@ -1,0 +1,30 @@
+{
+  "day": 69,
+  "postId": "069",
+  "hook": "Saltwater taffy trivia!",
+  "q1": {
+    "question": "What gets folded into taffy as it is pulled?",
+    "answer": "Air"
+  },
+  "q2": {
+    "question": "Which New Jersey shore city is famous for saltwater taffy?",
+    "answer": "Atlantic City"
+  },
+  "q3": {
+    "question": "About when did saltwater taffy appear on the Atlantic City boardwalk?",
+    "answer": "Around 1880",
+    "withhold": true
+  },
+  "cta": "Play the web edition!",
+  "caption": "Taffy trivia! Play the web edition—link in bio! #trivia #taffy #quiztok #candyfacts",
+  "visualTemplate": "A",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "website",
+    "destinationUrl": "https://dragonlabs.app/arcade/trivia-candy-fun/",
+    "sources": [
+      "https://www.smithsonianmag.com/travel/what-makes-salt-water-taffy-perfect-summer-candy-180963674/"
+    ]
+  }
+}
