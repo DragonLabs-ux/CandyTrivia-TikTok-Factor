@@ -1,0 +1,30 @@
+{
+  "day": 71,
+  "postId": "071",
+  "hook": "Pop Rocks myth-buster!",
+  "q1": {
+    "question": "Which gas gives Pop Rocks their famous crackle?",
+    "answer": "Carbon dioxide"
+  },
+  "q2": {
+    "question": "What happens to the candy's sugar when it dissolves in your mouth?",
+    "answer": "It releases trapped gas"
+  },
+  "q3": {
+    "question": "Are Pop Rocks' popping sounds caused by tiny explosions?",
+    "answer": "No—escaping gas",
+    "withhold": true
+  },
+  "cta": "Play the web edition!",
+  "caption": "Pop Rocks myth-buster! Play the web game—link in bio! #trivia #poprocks #quiztok #candyquiz",
+  "visualTemplate": "C",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "website",
+    "destinationUrl": "https://dragonlabs.app/arcade/trivia-candy-fun/",
+    "sources": [
+      "https://www.acs.org/education/celebrating-chemistry-editions/2021-ncw/pop-rocks.html"
+    ]
+  }
+}
