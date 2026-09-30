@@ -27,5 +27,24 @@
       "https://www.history.com/articles/candy-corn-invented",
       "https://fieldreport.caes.uga.edu/news/its-corn-the-history-of-an-adored-and-reviled-halloween-candy/"
     ]
+  },
+  "cover": {
+    "heading": "CANDY CORN CHALLENGE",
+    "backgroundImage": "visuals/candy-v1/backgrounds/candy.png",
+    "usesEmojiFallback": false,
+    "items": [
+      {
+        "label": "TRI-COLOR CANDY",
+        "subjectImage": "visuals/candy-v1/subjects/candy.png"
+      },
+      {
+        "label": "CANDY CORN",
+        "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+      },
+      {
+        "label": "MELLOWCREME",
+        "subjectImage": "visuals/candy-v1/subjects/fun.png"
+      }
+    ]
   }
 }
