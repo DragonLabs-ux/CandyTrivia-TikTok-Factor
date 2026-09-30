@@ -1,0 +1,31 @@
+{
+  "day": 65,
+  "postId": "065",
+  "hook": "Chocolate clues—can you go 3 for 3?",
+  "q1": {
+    "question": "What is the white surface haze on chocolate often called?",
+    "answer": "Chocolate bloom"
+  },
+  "q2": {
+    "question": "What process helps chocolate set glossy with a good snap?",
+    "answer": "Tempering"
+  },
+  "q3": {
+    "question": "What fat from cacao is used in chocolate?",
+    "answer": "Cocoa butter",
+    "withhold": true
+  },
+  "cta": "Play the web edition!",
+  "caption": "Chocolate trivia time! Play the web edition—link in bio! #trivia #chocolate #quiztok #candyquiz",
+  "visualTemplate": "C",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "website",
+    "destinationUrl": "https://dragonlabs.app/arcade/trivia-candy-fun/",
+    "sources": [
+      "https://cen.acs.org/articles/86/i26/Chocolate-Explained.html",
+      "https://pubs.acs.org/doi/10.1021/acs.cgd.5c00269"
+    ]
+  }
+}
