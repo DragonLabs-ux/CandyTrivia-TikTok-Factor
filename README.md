@@ -37,7 +37,7 @@ X posts are recorded separately in the private cloud ledger under `x_promo`, so 
 
 ## Promotional artwork playbook
 
-Use the [Trivia Candy Fun artwork production playbook](docs/marketing/trivia-candy-fun-artwork-production-playbook.md) to create brand-matched campaign art for the website and iOS app. It includes destination-specific messaging, a reusable image-generation prompt, platform adaptations, and a pre-export quality checklist.
+Use the [Trivia Candy Fun artwork production playbook](docs/marketing/trivia-candy-fun-artwork-production-playbook.md) to create brand-matched campaign art for the website and iOS app. It includes destination-specific messaging, a reusable image-generation prompt, platform adaptations, and a pre-export quality checklist. The [10-post stock pack and monthly plan](docs/marketing/stock-posts-2026-10-plan.md) includes ten separate, unscheduled content drafts.
 
 ## Super-premium visual system
 
