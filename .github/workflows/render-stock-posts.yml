@@ -50,6 +50,9 @@ jobs:
           npm ci
           python -m pip install "edge-tts>=7,<8"
 
+      - name: Audit all stock drafts before rendering
+        run: npm run audit-content -- examples/stock/2026-10/post-*.json
+
       - name: Render the ten stock drafts (no upload or publishing)
         shell: bash
         run: npm run render-local -- examples/stock/2026-10/post-*.json
