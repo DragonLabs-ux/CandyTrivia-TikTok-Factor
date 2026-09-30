@@ -20,7 +20,7 @@ jobs:
   render-stock:
     name: Render ten review-only stock videos
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     env:
       OPENAI_IMAGES_ENABLED: "0"
       TTS_ENABLED: "1"
