@@ -1082,6 +1082,9 @@ def main(argv=None):
         def shadow(s):
             s.setdefault('shadow_runs', []).append({'at': now_iso(), 'posts': [p['id'] for p in planned],
                 'channel_id': s['channel_id'],
+                'attention': [key for key, row in s['posts'].items()
+                    if row['status'] in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED', 'RENDERING'}
+                    or (row.get('x_promo') or {}).get('status') in {'UNCERTAIN', 'SUBMITTING', 'BLOCKED'}],
                 'campaign_hash': digest({k: v['approved_hash'] for k, v in posts.items()})})
             s['shadow_runs'] = s['shadow_runs'][-200:]
         store.change(shadow)
