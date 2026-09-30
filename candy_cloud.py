@@ -1081,6 +1081,7 @@ def main(argv=None):
     if args.mode == 'shadow':
         def shadow(s):
             s.setdefault('shadow_runs', []).append({'at': now_iso(), 'posts': [p['id'] for p in planned],
+                'channel_id': s['channel_id'],
                 'campaign_hash': digest({k: v['approved_hash'] for k, v in posts.items()})})
             s['shadow_runs'] = s['shadow_runs'][-200:]
         store.change(shadow)
