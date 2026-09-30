@@ -1,0 +1,31 @@
+{
+  "day": 68,
+  "postId": "068",
+  "hook": "Rock candy: sweet science edition!",
+  "q1": {
+    "question": "What sugar molecule forms the crystals in classic rock candy?",
+    "answer": "Sucrose"
+  },
+  "q2": {
+    "question": "What happens to sugar molecules as a rock-candy crystal grows?",
+    "answer": "They join the crystal"
+  },
+  "q3": {
+    "question": "What kind of material provides a place for rock-candy crystals to grow?",
+    "answer": "A seed surface",
+    "withhold": true
+  },
+  "cta": "Get Trivia Candy Fun on the App Store!",
+  "caption": "Rock candy science! Get Trivia Candy Fun—link in bio! #trivia #candyfacts #quiztok #sweetscience",
+  "visualTemplate": "C",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "app",
+    "destinationUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "sources": [
+      "https://www.acs.org/content/dam/acsorg/education/resources/highschool/chemmatters/documents/the-sweet-science-of-candymaking.pdf",
+      "https://annex.exploratorium.edu/cooking/candy/rock-pop.html"
+    ]
+  }
+}
