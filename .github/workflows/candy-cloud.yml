@@ -49,7 +49,7 @@ jobs:
     env:
       PYTHONUTF8: '1'
       PYTHONUNBUFFERED: '1'
-      MODE: ${{ inputs.mode || 'refill' }}
+      MODE: ${{ inputs.mode || vars.CANDY_CLOUD_MODE || 'shadow' }}
       POST: ${{ inputs.post }}
       CANDY_PUBLISHING_ENABLED: 'false'
       BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
