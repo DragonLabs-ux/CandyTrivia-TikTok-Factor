@@ -27,5 +27,24 @@
       "https://cen.acs.org/articles/86/i26/Chocolate-Explained.html",
       "https://pubs.acs.org/doi/10.1021/acs.cgd.5c00269"
     ]
+  },
+  "cover": {
+    "heading": "CHOCOLATE TRIVIA",
+    "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+    "usesEmojiFallback": false,
+    "items": [
+      {
+        "label": "CHOCOLATE",
+        "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+      },
+      {
+        "label": "TEMPERING",
+        "subjectImage": "visuals/candy-v1/subjects/candy.png"
+      },
+      {
+        "label": "COCOA BUTTER",
+        "subjectImage": "visuals/candy-v1/subjects/character.png"
+      }
+    ]
   }
 }
