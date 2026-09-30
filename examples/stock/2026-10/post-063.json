@@ -1,0 +1,32 @@
+{
+  "day": 63,
+  "postId": "063",
+  "hook": "Candy science speed round!",
+  "q1": {
+    "question": "What gas trapped in Pop Rocks creates its popping sensation?",
+    "answer": "Carbon dioxide"
+  },
+  "q2": {
+    "question": "Which candy grows into large sugar crystals from syrup?",
+    "answer": "Rock candy"
+  },
+  "q3": {
+    "question": "What does pulling saltwater taffy mix into the candy?",
+    "answer": "Air",
+    "withhold": true
+  },
+  "cta": "Play the web edition!",
+  "caption": "Can you crack these sweet science clues? Play the web game—link in bio! #trivia #candyquiz #quiztok #sweetfacts",
+  "visualTemplate": "A",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "website",
+    "destinationUrl": "https://dragonlabs.app/arcade/trivia-candy-fun/",
+    "sources": [
+      "https://www.acs.org/education/celebrating-chemistry-editions/2021-ncw/pop-rocks.html",
+      "https://annex.exploratorium.edu/cooking/candy/rock-pop.html",
+      "https://www.smithsonianmag.com/travel/what-makes-salt-water-taffy-perfect-summer-candy-180963674/"
+    ]
+  }
+}
