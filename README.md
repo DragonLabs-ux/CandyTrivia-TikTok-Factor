@@ -35,6 +35,10 @@ X posts are recorded separately in the private cloud ledger under `x_promo`, so 
 
 `trivia JSON -> local/ChatGPT candy artwork -> neural voice + premium SFX -> Remotion MP4 -> Cloudflare R2 -> Buffer -> TikTok/X -> analytics`
 
+## Promotional artwork playbook
+
+Use the [Trivia Candy Fun artwork production playbook](docs/marketing/trivia-candy-fun-artwork-production-playbook.md) to create brand-matched campaign art for the website and iOS app. It includes destination-specific messaging, a reusable image-generation prompt, platform adaptations, and a pre-export quality checklist.
+
 ## Super-premium visual system
 
 The production renderer now includes three selectable 1080x1920 Remotion templates:
