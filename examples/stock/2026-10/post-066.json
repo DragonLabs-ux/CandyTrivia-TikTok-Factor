@@ -1,0 +1,31 @@
+{
+  "day": 66,
+  "postId": "066",
+  "hook": "Sour candy showdown!",
+  "q1": {
+    "question": "Which food acid is strongly associated with citrus sourness?",
+    "answer": "Citric acid"
+  },
+  "q2": {
+    "question": "Which acid can give some sour candies a lingering tart bite?",
+    "answer": "Malic acid"
+  },
+  "q3": {
+    "question": "What taste do food acids create in sour candy?",
+    "answer": "Sour",
+    "withhold": true
+  },
+  "cta": "Get Trivia Candy Fun on the App Store!",
+  "caption": "Sour candy showdown! Get the app—link in bio! #trivia #sourcandy #quiztok #candytok",
+  "visualTemplate": "A",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "app",
+    "destinationUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "sources": [
+      "https://pubmed.ncbi.nlm.nih.gov/3714832/",
+      "https://pubmed.ncbi.nlm.nih.gov/17995849/"
+    ]
+  }
+}
