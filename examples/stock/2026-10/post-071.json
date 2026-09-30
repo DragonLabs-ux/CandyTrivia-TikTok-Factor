@@ -26,5 +26,24 @@
     "sources": [
       "https://www.acs.org/education/celebrating-chemistry-editions/2021-ncw/pop-rocks.html"
     ]
+  },
+  "cover": {
+    "heading": "POP ROCKS MYTH CHECK",
+    "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+    "usesEmojiFallback": false,
+    "items": [
+      {
+        "label": "POP ROCKS",
+        "subjectImage": "visuals/candy-v1/subjects/candy.png"
+      },
+      {
+        "label": "TRAPPED GAS",
+        "subjectImage": "visuals/candy-v1/subjects/science.png"
+      },
+      {
+        "label": "CRACKLE",
+        "subjectImage": "visuals/candy-v1/subjects/fun.png"
+      }
+    ]
   }
 }
