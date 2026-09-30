@@ -51,7 +51,7 @@ jobs:
       PYTHONUNBUFFERED: '1'
       MODE: ${{ inputs.mode || 'refill' }}
       POST: ${{ inputs.post }}
-      CANDY_PUBLISHING_ENABLED: 'true'
+      CANDY_PUBLISHING_ENABLED: 'false'
       BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
       BUFFER_TIKTOK_CHANNEL_ID: ${{ secrets.BUFFER_TIKTOK_CHANNEL_ID }}
       BUFFER_X_CHANNEL_ID: ${{ secrets.BUFFER_X_CHANNEL_ID }}
