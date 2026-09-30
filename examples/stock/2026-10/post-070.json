@@ -1,0 +1,31 @@
+{
+  "day": 70,
+  "postId": "070",
+  "hook": "Candy corn challenge!",
+  "q1": {
+    "question": "What colors are layered in the classic candy-corn kernel?",
+    "answer": "Yellow, orange, and white"
+  },
+  "q2": {
+    "question": "What is the mellowcreme confection shaped like?",
+    "answer": "A kernel of corn"
+  },
+  "q3": {
+    "question": "Candy corn's early origins are usually placed in which decade?",
+    "answer": "The 1880s",
+    "withhold": true
+  },
+  "cta": "Get Trivia Candy Fun on the App Store!",
+  "caption": "Candy corn challenge! Get the app—link in bio! #trivia #candycorn #quiztime #candytok",
+  "visualTemplate": "B",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "app",
+    "destinationUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "sources": [
+      "https://www.history.com/articles/candy-corn-invented",
+      "https://fieldreport.caes.uga.edu/news/its-corn-the-history-of-an-adored-and-reviled-halloween-candy/"
+    ]
+  }
+}
