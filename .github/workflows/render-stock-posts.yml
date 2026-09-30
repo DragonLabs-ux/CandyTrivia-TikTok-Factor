@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: candy-stock-render-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   render-stock:
