@@ -1,0 +1,130 @@
+name: Split stock videos for Drive transfer
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/repackage-stock-posts-for-drive.yml
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out stock captions
+        uses: actions/checkout@v4
+
+      - name: Download the successful render artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: trivia-candy-fun-stock-2026-10-18
+          path: source
+          run-id: 36755227885
+          github-token: ${{ github.token }}
+
+      - name: Package each video with its captions and source post
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          source = Path("source")
+          output = Path("packages")
+          output.mkdir(exist_ok=True)
+          limit = 95 * 1024 * 1024
+
+          for day in range(63, 73):
+              post_id = f"{day:03d}"
+              names = [
+                  f"candy-trivia-day-{post_id}.mp4",
+                  f"candy-trivia-day-{post_id}.srt",
+                  f"candy-trivia-day-{post_id}-cover.png",
+              ]
+              files = []
+              for name in names:
+                  matches = [p for p in source.rglob(name) if p.is_file()]
+                  if len(matches) != 1:
+                      raise SystemExit(f"Expected one {name}; found {len(matches)}")
+                  files.append(matches[0])
+
+              post_json = Path(f"examples/stock/2026-10/post-{post_id}.json")
+              if not post_json.is_file():
+                  raise SystemExit(f"Missing source caption file: {post_json}")
+              files.append(post_json)
+
+              archive = output / f"post-{post_id}.zip"
+              with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+                  for file in files:
+                      zf.write(file, arcname=file.name)
+              if archive.stat().st_size >= limit:
+                  raise SystemExit(f"{archive} exceeds safe Drive transfer size: {archive.stat().st_size}")
+              print(f"Prepared {archive} ({archive.stat().st_size} bytes)")
+          PY
+
+      - name: Upload post 063 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-063-october-2026
+          path: packages/post-063.zip
+          retention-days: 90
+      - name: Upload post 064 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-064-october-2026
+          path: packages/post-064.zip
+          retention-days: 90
+      - name: Upload post 065 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-065-october-2026
+          path: packages/post-065.zip
+          retention-days: 90
+      - name: Upload post 066 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-066-october-2026
+          path: packages/post-066.zip
+          retention-days: 90
+      - name: Upload post 067 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-067-october-2026
+          path: packages/post-067.zip
+          retention-days: 90
+      - name: Upload post 068 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-068-october-2026
+          path: packages/post-068.zip
+          retention-days: 90
+      - name: Upload post 069 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-069-october-2026
+          path: packages/post-069.zip
+          retention-days: 90
+      - name: Upload post 070 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-070-october-2026
+          path: packages/post-070.zip
+          retention-days: 90
+      - name: Upload post 071 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-071-october-2026
+          path: packages/post-071.zip
+          retention-days: 90
+      - name: Upload post 072 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-post-072-october-2026
+          path: packages/post-072.zip
+          retention-days: 90
