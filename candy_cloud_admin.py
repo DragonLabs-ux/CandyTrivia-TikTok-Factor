@@ -263,7 +263,8 @@ def activate(store, post_id):
     def change(s):
         expected = digest({k: p['approved_hash'] for k, p in load_campaign().items()})
         runs = sorted((r for r in s.get('shadow_runs', [])
-                       if r.get('campaign_hash') == expected), key=lambda r: dt(r['at']))
+                       if r.get('campaign_hash') == expected and r.get('channel_id') == s.get('channel_id')),
+                       key=lambda r: dt(r['at']))
         clean = []
         for row in runs:
             if clean and dt(row['at']) - dt(clean[-1]['at']) > SHADOW_MAX_GAP:
