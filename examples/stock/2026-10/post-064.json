@@ -27,5 +27,24 @@
       "https://illumin.usc.edu/cotton-candy-carnival-snack-to-medical-wonder/",
       "https://www.history.com/articles/candy-corn-invented"
     ]
+  },
+  "cover": {
+    "heading": "COTTON CANDY + CORN",
+    "backgroundImage": "visuals/candy-v1/backgrounds/science.png",
+    "usesEmojiFallback": false,
+    "items": [
+      {
+        "label": "COTTON CANDY",
+        "subjectImage": "visuals/candy-v1/subjects/delicious.png"
+      },
+      {
+        "label": "CANDY CORN",
+        "subjectImage": "visuals/candy-v1/subjects/candy.png"
+      },
+      {
+        "label": "MELLOWCREME",
+        "subjectImage": "visuals/candy-v1/subjects/fun.png"
+      }
+    ]
   }
 }
