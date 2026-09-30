@@ -1,0 +1,30 @@
+{
+  "day": 72,
+  "postId": "072",
+  "hook": "Sweet science final round!",
+  "q1": {
+    "question": "What force helps fling melted sugar into cotton-candy threads?",
+    "answer": "Centrifugal force"
+  },
+  "q2": {
+    "question": "What is the main ingredient spun into cotton candy?",
+    "answer": "Sugar"
+  },
+  "q3": {
+    "question": "What is the fine, fluffy candy thread often called?",
+    "answer": "Sugar floss",
+    "withhold": true
+  },
+  "cta": "Get Trivia Candy Fun on the App Store!",
+  "caption": "Sweet science final round! Get the app—link in bio! #trivia #cottoncandy #quiztok #sweetfacts",
+  "visualTemplate": "A",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "app",
+    "destinationUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "sources": [
+      "https://illumin.usc.edu/cotton-candy-carnival-snack-to-medical-wonder/"
+    ]
+  }
+}
