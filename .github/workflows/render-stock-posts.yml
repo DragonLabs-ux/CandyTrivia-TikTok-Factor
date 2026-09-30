@@ -1,0 +1,83 @@
+name: Render Candy Trivia Stock Posts
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - examples/stock/2026-10/**
+      - .github/workflows/render-stock-posts.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candy-stock-render-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  render-stock:
+    name: Render ten review-only stock videos
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OPENAI_IMAGES_ENABLED: "0"
+      TTS_ENABLED: "1"
+      TTS_VOICE: en-US-AvaNeural
+      TTS_RATE: +8%
+      TTS_PITCH: +0Hz
+      CANDY_PUBLISHING_DISABLED: "1"
+    steps:
+      - name: Check out stock drafts
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install renderer and free neural voice dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+          npm ci
+          python -m pip install "edge-tts>=7,<8"
+
+      - name: Render the ten stock drafts (no upload or publishing)
+        shell: bash
+        run: npm run render-local -- examples/stock/2026-10/post-*.json
+
+      - name: Confirm all ten MP4s and captions exist
+        shell: bash
+        run: |
+          shopt -s nullglob
+          videos=(out/candy-trivia-day-*.mp4)
+          captions=(out/candy-trivia-day-*.srt)
+          if [[ ${#videos[@]} -ne 10 || ${#captions[@]} -ne 10 ]]; then
+            echo "Expected 10 MP4s and 10 SRT captions; found ${#videos[@]} MP4s and ${#captions[@]} SRTs."
+            exit 1
+          fi
+          for video in "${videos[@]}"; do
+            test -s "$video"
+            ffmpeg -v error -i "$video" -f null -
+          done
+          printf '%s\n' "${videos[@]}" "${captions[@]}" > out/stock-render-manifest.txt
+
+      - name: Store review package as a downloadable GitHub Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivia-candy-fun-stock-2026-10-${{ github.run_number }}
+          path: |
+            out/candy-trivia-day-*.mp4
+            out/candy-trivia-day-*.srt
+            out/candy-trivia-day-*-cover.png
+            out/stock-render-manifest.txt
+          if-no-files-found: error
+          retention-days: 90
