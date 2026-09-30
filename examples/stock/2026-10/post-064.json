@@ -1,0 +1,31 @@
+{
+  "day": 64,
+  "postId": "064",
+  "hook": "Candy colors and sugar tricks!",
+  "q1": {
+    "question": "What process turns melted sugar into cotton-candy threads?",
+    "answer": "Spinning"
+  },
+  "q2": {
+    "question": "What three colors appear on classic candy corn?",
+    "answer": "Yellow, orange, and white"
+  },
+  "q3": {
+    "question": "Candy corn belongs to what type of confection?",
+    "answer": "Mellowcreme",
+    "withhold": true
+  },
+  "cta": "Get Trivia Candy Fun on the App Store!",
+  "caption": "Candy colors challenge! Get the app—link in bio! #trivia #candytok #quiztime #candyfacts",
+  "visualTemplate": "B",
+  "meta": {
+    "format": "stock-candy-trivia",
+    "status": "draft-not-scheduled",
+    "destination": "app",
+    "destinationUrl": "https://apps.apple.com/us/app/trivia-candy-fun/id6768475077",
+    "sources": [
+      "https://illumin.usc.edu/cotton-candy-carnival-snack-to-medical-wonder/",
+      "https://www.history.com/articles/candy-corn-invented"
+    ]
+  }
+}
