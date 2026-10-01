@@ -1109,7 +1109,19 @@ def main(argv=None):
             deliver(store, buffer, post, x_channel=x_channel)
     state, _ = store.load()
     value = report(state, posts, planned)
-    return 2 if value['attention'] else 0
+    if value['attention']:
+        # Scheduled shadow runs are health monitors, not publishing attempts.
+        # Keep attention visible as a GitHub warning without turning the whole
+        # workflow red; real execution/configuration errors still fail normally.
+        if args.mode == 'shadow':
+            message = 'Candy attention: ' + ', '.join(value['attention'])
+            print('::warning::' + message)
+            if path := os.environ.get('GITHUB_STEP_SUMMARY'):
+                with open(path, 'a', encoding='utf-8') as summary:
+                    summary.write('\n⚠️ ' + message + '\n')
+            return 0
+        return 2
+    return 0
 
 
 if __name__ == '__main__':
