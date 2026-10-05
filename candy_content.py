@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Maintain a reviewable Candy content runway; never publish or approve generated posts."""
-import argparse, json, os, random, re, time, urllib.error, urllib.request
+import argparse, json, math, os, random, re, time, urllib.error, urllib.request
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -12,6 +12,14 @@ CAPTIONS = (
     'Round {n}: Three questions. One perfect score. 🍬 #trivia #quiztok #braingames #iphone',
     'Round {n}: Most players miss the last one. 🍭 #trivia #quiztok #mobilegames #challenge',
 )
+MAX_RATE_LIMIT_RETRIES = 4
+MAX_RATE_LIMIT_WAIT_SECONDS = 300
+NON_RETRYABLE_429_CODES = frozenset({
+    'insufficient_quota', 'credit_balance_exhausted',
+    'organization_spend_limit_exceeded', 'project_spend_limit_exceeded',
+    'organization_usage_limit_exceeded', 'billing_hard_limit_reached',
+})
+KNOWN_429_CODES = NON_RETRYABLE_429_CODES | {'rate_limit_exceeded', 'slow_down'}
 
 def response_text(payload):
     for item in payload.get('output', []):
@@ -19,28 +27,46 @@ def response_text(payload):
             if part.get('type') == 'output_text': return part['text']
     raise CloudError('CONTENT_RESPONSE_MISSING')
 
+def _reset_delay_seconds(value):
+    """OpenAI reset headers are durations (for example, 1s or 6m0s)."""
+    parts = re.findall(r'(\d+(?:\.\d+)?)(ms|[hms])', value)
+    if parts and ''.join(amount + unit for amount, unit in parts) == value:
+        units = {'h': 3600, 'm': 60, 's': 1, 'ms': .001}
+        return sum(float(amount) * units[unit] for amount, unit in parts)
+    return None
+
 def _retry_delay_seconds(exc, attempt):
     headers = exc.headers or {}
     retry_after = headers.get('Retry-After')
     if retry_after:
         try:
-            return max(0, float(retry_after))
+            seconds = float(retry_after)
+            if math.isfinite(seconds):
+                return max(0, seconds)
         except ValueError:
             try:
                 when = parsedate_to_datetime(retry_after)
-                return max(0, int((when - datetime.now(when.tzinfo)).total_seconds()))
+                return max(0, math.ceil((when - datetime.now(when.tzinfo)).total_seconds()))
             except Exception:
                 pass
-    for key in ('x-ratelimit-reset-requests', 'x-ratelimit-reset', 'x-ratelimit-reset-tokens'):
-        value = headers.get(key)
-        if value is None:
-            continue
-        try:
-            reset = int(float(value))
-            return max(0, reset - int(time.time()))
-        except ValueError:
-            continue
+    resets = [_reset_delay_seconds(value) for key in (
+        'x-ratelimit-reset-requests', 'x-ratelimit-reset-tokens',
+        'x-ratelimit-reset-project-tokens')
+        if (value := headers.get(key)) is not None]
+    resets = [value for value in resets if value is not None]
+    if resets:
+        return max(resets)
     return min(30 * (2 ** attempt), 240)
+
+def _safe_error_code(exc):
+    # Never print the response body: it can contain request details. Only emit
+    # recognized API codes, and read a bounded amount from the error stream.
+    try:
+        error = json.loads(exc.read(16384)).get('error', {})
+        code = error.get('code') if isinstance(error, dict) else None
+    except (ValueError, TypeError, UnicodeError, AttributeError, OSError):
+        code = None
+    return code if isinstance(code, str) and code in KNOWN_429_CODES else 'unknown'
 
 def request_json(prompt, schema, name):
     api_key = os.environ.get('OPENAI_API_KEY')
@@ -52,7 +78,8 @@ def request_json(prompt, schema, name):
         'input': prompt,
         'text': {'format': {'type': 'json_schema', 'name': name, 'strict': True, 'schema': schema}},
     }
-    for attempt in range(5):
+    started = time.monotonic()
+    for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
         req = urllib.request.Request(
             'https://api.openai.com/v1/responses', data=json.dumps(body).encode(),
             headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'})
@@ -60,11 +87,15 @@ def request_json(prompt, schema, name):
             with urllib.request.urlopen(req, timeout=600) as response:
                 return json.loads(response_text(json.load(response)))
         except urllib.error.HTTPError as exc:
-            if exc.code != 429 or attempt == 4:
-                raise
+            code = _safe_error_code(exc)
+            failure = f'CONTENT_API_HTTP_{exc.code} code={code}'
+            if exc.code != 429 or code in NON_RETRYABLE_429_CODES or attempt == MAX_RATE_LIMIT_RETRIES:
+                raise CloudError(failure) from None
             delay = _retry_delay_seconds(exc, attempt)
             delay = max(1.0, delay + random.uniform(0, min(1.0, delay / 10.0)))
-            print(f'OpenAI rate limit; retrying in {delay:.1f}s.', flush=True)
+            if time.monotonic() - started + delay > MAX_RATE_LIMIT_WAIT_SECONDS:
+                raise CloudError(f'{failure} retry_budget_exceeded') from None
+            print(f'OpenAI HTTP 429 (code={code}); retrying in {delay:.1f}s.', flush=True)
             time.sleep(delay)
     raise CloudError('CONTENT_RESPONSE_MISSING')
 
